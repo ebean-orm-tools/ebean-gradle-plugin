@@ -1,8 +1,8 @@
 group 'org.avaje.ebean'
-version '0.1.1-SNAPSHOT'
+version '0.1.1'
 
 apply plugin: 'groovy'
-apply plugin: 'maven-publish'
+apply plugin: 'maven'
 apply plugin: 'signing'
 
 repositories {
@@ -36,17 +36,6 @@ signing {
     sign configurations.archives
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-//            artifact sourceJar {
-//                classifier "sources"
-//            }
-        }
-    }
-}
-
 uploadArchives {
     repositories {
         mavenDeployer {
@@ -65,7 +54,7 @@ uploadArchives {
                 scm {
                     url 'scm:git@github.com/ebean-orm/ebean-gradle-plugin.git'
                     connection 'scm:git@github.com/ebean-orm/ebean-gradle-plugin.git'
-                    developerConnection 'scm:git@github.com/ebean-orm/ebean-gradle-plugin.git'
+                    developerConnection 'scm:git:https://github.com/ebean-orm/ebean-gradle-plugin.git'
                 }
 
                 licenses {
