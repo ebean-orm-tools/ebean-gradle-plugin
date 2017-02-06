@@ -1,17 +1,19 @@
-group 'org.avaje.ebean'
-version '0.1.1'
+group 'io.ebean'
+version '0.2.1'
 
 apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'signing'
+apply plugin: 'maven-publish'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    compile 'org.avaje.ebean:ebean-agent:8.1.1'
-    compile 'org.avaje.ebean:querybean-agent:8.1.3'
+    compile group: 'io.ebean', name: 'ebean-agent', version: '10.1.2'
+    compile group: 'io.ebean', name: 'querybean-agent', version: '10.1.3'
+
     compile gradleApi()
     compile localGroovy()
 }
@@ -36,13 +38,21 @@ signing {
     sign configurations.archives
 }
 
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
 uploadArchives {
     repositories {
         mavenDeployer {
             beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
             repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                authentication(userName: sonatypeUsername, password: sonatypePassword)
+                authentication(userName: 'sonatypeUsername', password: 'sonatypePassword')
             }
 
             pom.project {
@@ -69,6 +79,10 @@ uploadArchives {
                     developer {
                         id 'rbygrave'
                         name 'Robin Bygrave'
+                    }
+                    developer {
+                        id 'vnnv'
+                        name 'Victor Nikiforov'
                     }
                 }
             }

@@ -1,11 +1,11 @@
-package org.avaje.ebean.gradle
+package io.ebean.gradle
 
-import com.avaje.ebean.enhance.agent.InputStreamTransform
-import com.avaje.ebean.enhance.agent.Transformer
-import org.avaje.ebean.gradle.util.ClassUtils
-import org.avaje.ebean.gradle.util.EnhancementFileFilter
-import org.avaje.ebean.typequery.agent.CombinedTransform
-import org.avaje.ebean.typequery.agent.QueryBeanTransformer
+import io.ebean.enhance.agent.InputStreamTransform
+import io.ebean.enhance.agent.Transformer
+import io.ebean.gradle.util.ClassUtils
+import io.ebean.gradle.util.EnhancementFileFilter
+import io.ebean.typequery.agent.CombinedTransform
+import io.ebean.typequery.agent.QueryBeanTransformer
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
