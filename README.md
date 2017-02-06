@@ -18,12 +18,16 @@ Currently using this with entity beans written in Kotlin (rather than Java).  I 
 There is also an issue with the Ebean IDEA plugin due to the unexpected directory structure (where ebean-typequery.mf goes).
 Works with java classes. 
 
+
 ## Example 1 - build.gradle
 ```groovy
 
+// First install the plugin in your local maven repo with 
+// gradle publishToMavenLocal
+ 
 buildscript {
     repositories {
-        mavenLocal()
+        mavenLocal() 
         mavenCentral()
     }
     dependencies {
