@@ -1,16 +1,16 @@
 package org.avaje.ebean.gradle
 
-import com.avaje.ebean.enhance.agent.InputStreamTransform
-import com.avaje.ebean.enhance.agent.Transformer
-import org.avaje.ebean.gradle.util.ClassUtils
-import org.avaje.ebean.gradle.util.EnhancementFileFilter
-import org.avaje.ebean.typequery.agent.CombinedTransform
-import org.avaje.ebean.typequery.agent.QueryBeanTransformer
-import org.gradle.api.logging.Logger
-import org.gradle.api.logging.Logging
-
+import io.ebean.enhance.agent.Transformer
+import io.ebean.typequery.agent.CombinedTransform
+import io.ebean.typequery.agent.QueryBeanTransformer
 import java.lang.instrument.IllegalClassFormatException
 import java.nio.file.Path
+
+import org.avaje.ebean.gradle.util.ClassUtils
+import org.avaje.ebean.gradle.util.EnhancementFileFilter
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
+import io.ebean.enhance.agent.InputStreamTransform
 
 class EbeanEnhancer {
 
@@ -29,6 +29,7 @@ class EbeanEnhancer {
 
     EbeanEnhancer(Path outputDir, URL[] extraClassPath, ClassLoader classLoader, EnhancePluginExtension params) {
 
+		logger.info('Calling enhancer' + outputDir + ':' + extraClassPath)
         this.outputDir = outputDir
         this.fileFilter = new EnhancementFileFilter(outputDir, params.packages)
         this.classLoader = new URLClassLoader(extraClassPath, classLoader);
@@ -47,8 +48,10 @@ class EbeanEnhancer {
     void enhance() {
 
         collectClassFiles(outputDir.toFile()).each { classFile ->
+			logger.info('Filter classFile: ' + classFile)
             if (fileFilter.accept(classFile)) {
-                enhanceClassFile(classFile);
+				logger.info('Enhancing: ' + classFile)
+			    enhanceClassFile(classFile);
             }
         }
     }
@@ -70,6 +73,10 @@ class EbeanEnhancer {
             classFile.withInputStream { classInputStream ->
 
                 def classBytes = InputStreamTransform.readBytes(classInputStream)
+				
+				// Make sure to close the stream otherwise classFile.delete() returns false on Windows
+				classInputStream.close();
+				
                 CombinedTransform.Response response = combinedTransform.transform(classLoader, className, null, null, classBytes)
 
                 if (response.isEnhanced()) {
