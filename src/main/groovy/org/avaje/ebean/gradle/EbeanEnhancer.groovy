@@ -64,10 +64,9 @@ class EbeanEnhancer {
 
     def className = ClassUtils.makeClassName(outputDir, classFile)
 
-    if (
-    className.contains('$$anonfun$') ||     //scala lambda: anonymous function
-      className.contains('$_')                //groovy meta info classes & closures
-    ) return
+    if (isIgnorableClass(className)) {
+      return
+    }
 
     try {
       classFile.withInputStream { classInputStream ->
@@ -88,7 +87,7 @@ class EbeanEnhancer {
             }
 
           } catch (IOException e) {
-            throw new EnhanceException("Unable to store фт enhanced class data back to file $classFile.name", e)
+            throw new EnhanceException("Unable to store enhanced class data back to file $classFile.name", e)
           }
         }
       }
@@ -97,6 +96,13 @@ class EbeanEnhancer {
     } catch (IllegalClassFormatException e) {
       throw new EnhanceException("Unable to parse class file $classFile.name while enhance", e)
     }
+  }
+
+  /**
+   * Ignore scala lambda anonymous function and groovy meta info classes & closures
+   */
+  private static boolean isIgnorableClass(String className) {
+    return className.contains('$$anonfun$') || className.contains('$_')
   }
 
   private static List<File> collectClassFiles(File dir) {
