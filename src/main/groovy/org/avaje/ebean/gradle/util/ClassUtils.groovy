@@ -8,11 +8,12 @@ import java.nio.file.Paths
  */
 class ClassUtils {
 
+	
     /**
      * Return the class name given the base path and file
      */
     static String makeClassName(Path basePath, File classFile) {
         def classRelPath = basePath.relativize(Paths.get(classFile.toURI()))
-        classRelPath.toString().replaceAll('[.]class$', '').replace('\\', '.').replace('//', '.')
+        classRelPath.toString().replaceAll('[.]class$', '').replace('\\', '.').replace('/', '.')
     }
 }

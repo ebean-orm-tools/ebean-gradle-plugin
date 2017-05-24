@@ -18,7 +18,7 @@ class EnhancePluginExtension {
     /**
      * When true registers KAPT querybean generation (for Kotlin entity beans).
      */
-    boolean addKapt = true
+    boolean addKapt = false
 
     /**
      * querybean-generator version for use when addKapt is true.
