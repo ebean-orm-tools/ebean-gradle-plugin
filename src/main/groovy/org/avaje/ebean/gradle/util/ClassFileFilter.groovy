@@ -6,13 +6,13 @@ import org.gradle.api.logging.Logging
 import java.nio.file.Path
 
 class ClassFileFilter implements FileFilter {
-  private final Logger logger = Logging.getLogger(ClassFileFilter.class);
+  private final Logger logger = Logging.getLogger(ClassFileFilter.class)
 
-  private final Path outputDir;
-  private final ClassNameMatcher[] matchers;
+  private final Path outputDir
+  private final ClassNameMatcher[] matchers
 
   ClassFileFilter(Path outputDir, String[] patterns) {
-    this.outputDir = outputDir;
+    this.outputDir = outputDir
     this.matchers = patterns.collect { pattern -> new ClassNameMatcher(pattern) }
   }
 

@@ -14,7 +14,7 @@ import java.nio.file.Path
 
 class EbeanEnhancer {
 
-  private final Logger logger = Logging.getLogger(EnhancePlugin.class);
+  private final Logger logger = Logging.getLogger(EnhancePlugin.class)
 
   /**
    * Directory containing .class files.
@@ -23,26 +23,26 @@ class EbeanEnhancer {
 
   private final FileFilter fileFilter
 
-  private final CombinedTransform combinedTransform;
+  private final CombinedTransform combinedTransform
 
-  private final ClassLoader classLoader;
+  private final ClassLoader classLoader
 
   EbeanEnhancer(Path outputDir, URL[] extraClassPath, ClassLoader classLoader, EnhancePluginExtension params) {
 
     logger.info('Calling enhancer' + outputDir + ':' + extraClassPath)
     this.outputDir = outputDir
     this.fileFilter = new EnhancementFileFilter(outputDir, params.packages)
-    this.classLoader = new URLClassLoader(extraClassPath, classLoader);
+    this.classLoader = new URLClassLoader(extraClassPath, classLoader)
 
-    def args = "debug=" + params.debugLevel;
+    def args = "debug=" + params.debugLevel
 
     def packages = new HashSet<String>()
     packages.addAll(params.packages)
 
-    def queryBeanTransformer = new QueryBeanTransformer(args, classLoader, packages);
-    def transformer = new Transformer(extraClassPath, args);
+    def queryBeanTransformer = new QueryBeanTransformer(args, classLoader, packages)
+    def transformer = new Transformer(extraClassPath, args)
 
-    this.combinedTransform = new CombinedTransform(transformer, queryBeanTransformer);
+    this.combinedTransform = new CombinedTransform(transformer, queryBeanTransformer)
   }
 
   void enhance() {
@@ -51,7 +51,7 @@ class EbeanEnhancer {
       logger.info('Filter classFile: ' + classFile)
       if (fileFilter.accept(classFile)) {
         logger.info('Enhancing: ' + classFile)
-        enhanceClassFile(classFile);
+        enhanceClassFile(classFile)
       }
     }
   }
@@ -62,7 +62,7 @@ class EbeanEnhancer {
       logger.trace("trying to enhance $classFile.absolutePath")
     }
 
-    def className = ClassUtils.makeClassName(outputDir, classFile);
+    def className = ClassUtils.makeClassName(outputDir, classFile)
 
     if (
     className.contains('$$anonfun$') ||     //scala lambda: anonymous function
@@ -75,7 +75,7 @@ class EbeanEnhancer {
         def classBytes = InputStreamTransform.readBytes(classInputStream)
 
         // Make sure to close the stream otherwise classFile.delete() returns false on Windows
-        classInputStream.close();
+        classInputStream.close()
 
         CombinedTransform.Response response = combinedTransform.transform(classLoader, className, null, null, classBytes)
 
@@ -88,27 +88,27 @@ class EbeanEnhancer {
             }
 
           } catch (IOException e) {
-            throw new EnhanceException("Unable to store фт enhanced class data back to file $classFile.name", e);
+            throw new EnhanceException("Unable to store фт enhanced class data back to file $classFile.name", e)
           }
         }
       }
     } catch (IOException e) {
-      throw new EnhanceException("Unable to read class file $classFile.name for enhancement", e);
+      throw new EnhanceException("Unable to read class file $classFile.name for enhancement", e)
     } catch (IllegalClassFormatException e) {
-      throw new EnhanceException("Unable to parse class file $classFile.name while enhance", e);
+      throw new EnhanceException("Unable to parse class file $classFile.name while enhance", e)
     }
   }
 
   private static List<File> collectClassFiles(File dir) {
 
-    List<File> classFiles = new ArrayList<>();
+    List<File> classFiles = new ArrayList<>()
 
     dir.listFiles().each { file ->
       if (file.directory) {
-        classFiles.addAll(collectClassFiles(file));
+        classFiles.addAll(collectClassFiles(file))
       } else {
         if (file.name.endsWith(".class")) {
-          classFiles.add(file);
+          classFiles.add(file)
         }
       }
     }

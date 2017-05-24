@@ -5,7 +5,7 @@ import org.gradle.api.logging.Logging
 
 class ClassNameMatcher {
 
-  private final static Logger logger = Logging.getLogger(ClassNameMatcher.class);
+  private final static Logger logger = Logging.getLogger(ClassNameMatcher.class)
 
   private final String pattern
 
@@ -21,6 +21,6 @@ class ClassNameMatcher {
       logger.info('ClassNameMatcher Pattern failed:' + pattern + ' className: ' + className)
     }
 
-    return b;
+    return b
   }
 }

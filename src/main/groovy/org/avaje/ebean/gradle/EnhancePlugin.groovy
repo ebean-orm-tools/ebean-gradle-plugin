@@ -10,7 +10,7 @@ import org.gradle.api.tasks.TaskOutputs
 
 class EnhancePlugin implements Plugin<Project> {
 
-  private final Logger logger = Logging.getLogger(EnhancePlugin.class);
+  private final Logger logger = Logging.getLogger(EnhancePlugin.class)
 
   private static
   def supportedCompilerTasks = ['compileKotlinAfterJava', 'compileJava', 'compileKotlin', 'compileGroovy', 'compileScala', 'compileTestJava', 'compileTestKotlin', 'compileTestGroovy']
@@ -38,7 +38,7 @@ class EnhancePlugin implements Plugin<Project> {
       supportedCompilerTasks.each { compileTask ->
         tryHookCompilerTask(tasks, compileTask, project, params)
       }
-    });
+    })
   }
 
   private void tryHookCompilerTask(TaskContainer tasks, String taskName, Project project, EnhancePluginExtension params) {
@@ -50,7 +50,7 @@ class EnhancePlugin implements Plugin<Project> {
         enhanceTaskOutput(completedTask.outputs, project, params)
       })
     } catch (UnknownTaskException _) {
-      ; // ignore as compiler task is not activated
+      // ignore as compiler task is not activated
     }
   }
 
