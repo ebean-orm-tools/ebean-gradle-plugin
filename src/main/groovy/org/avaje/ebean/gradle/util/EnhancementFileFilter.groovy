@@ -1,26 +1,26 @@
 package org.avaje.ebean.gradle.util
 
-import java.nio.file.Path
-
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
+import java.nio.file.Path
+
 class EnhancementFileFilter implements FileFilter {
-	private final Logger logger = Logging.getLogger( EnhancementFileFilter.class );
-	
-    private FileFilter includeFilter = { file -> true }
+  private final Logger logger = Logging.getLogger(EnhancementFileFilter.class);
 
-    EnhancementFileFilter(Path outputDir, String[] packages) {
-		logger.info('Enhancment packages:' + packages)
-        if (packages.length > 0) {
-            includeFilter = new ClassFileFilter(outputDir, packages)
-        }
-    }
+  private FileFilter includeFilter = { file -> true }
 
-    @Override
-    boolean accept(File pathname) {
-        return includeFilter.accept(pathname)
+  EnhancementFileFilter(Path outputDir, String[] packages) {
+    logger.info('Enhancment packages:' + packages)
+    if (packages.length > 0) {
+      includeFilter = new ClassFileFilter(outputDir, packages)
     }
+  }
+
+  @Override
+  boolean accept(File pathname) {
+    return includeFilter.accept(pathname)
+  }
 }
 
 
