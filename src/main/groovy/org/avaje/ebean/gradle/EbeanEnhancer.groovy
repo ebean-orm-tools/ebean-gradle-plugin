@@ -1,9 +1,8 @@
 package org.avaje.ebean.gradle
 
-import io.ebean.enhance.agent.InputStreamTransform
-import io.ebean.enhance.agent.Transformer
-import io.ebean.typequery.agent.CombinedTransform
-import io.ebean.typequery.agent.QueryBeanTransformer
+import io.ebean.enhance.Transformer
+import io.ebean.enhance.common.InputStreamTransform
+
 import org.avaje.ebean.gradle.util.ClassUtils
 import org.avaje.ebean.gradle.util.EnhancementFileFilter
 import org.gradle.api.logging.Logger
@@ -23,7 +22,7 @@ class EbeanEnhancer {
 
   private final FileFilter fileFilter
 
-  private final CombinedTransform combinedTransform
+  private final Transformer combinedTransform
 
   private final ClassLoader classLoader
 
@@ -36,13 +35,7 @@ class EbeanEnhancer {
 
     def args = "debug=" + params.debugLevel
 
-    def packages = new HashSet<String>()
-    packages.addAll(params.packages)
-
-    def queryBeanTransformer = new QueryBeanTransformer(args, classLoader, packages)
-    def transformer = new Transformer(extraClassPath, args)
-
-    this.combinedTransform = new CombinedTransform(transformer, queryBeanTransformer)
+    this.combinedTransform = new Transformer(classLoader, args)
   }
 
   void enhance() {
@@ -76,14 +69,14 @@ class EbeanEnhancer {
         // Make sure to close the stream otherwise classFile.delete() returns false on Windows
         classInputStream.close()
 
-        CombinedTransform.Response response = combinedTransform.transform(classLoader, className, null, null, classBytes)
+        byte[] response = combinedTransform.transform(classLoader, className, null, null, classBytes)
 
-        if (response.isEnhanced()) {
+        if (response != null) {
           try {
             if (!classFile.delete()) {
               logger.error("Failed to delete enhanced file at $classFile.absolutePath")
             } else {
-              InputStreamTransform.writeBytes(response.classBytes, classFile)
+              InputStreamTransform.writeBytes(response, classFile)
             }
 
           } catch (IOException e) {
