@@ -6,22 +6,17 @@ package org.avaje.ebean.gradle
 class EnhancePluginExtension {
 
   /**
-   * Packages to enhance.
-   */
-  String[] packages = []
-
-  /**
    * Ebean enhancer debug level
    */
   int debugLevel = 0
 
   /**
-   * When true registers KAPT querybean generation (for Kotlin entity beans).
+   * When true registers Java querybean generation.
    */
-  boolean addKapt = false
+  boolean queryBeans = false
 
   /**
    * querybean-generator version for use when addKapt is true.
    */
-  String generatorVersion = '8.1.4'
+  String generatorVersion = '10.2.1'
 }

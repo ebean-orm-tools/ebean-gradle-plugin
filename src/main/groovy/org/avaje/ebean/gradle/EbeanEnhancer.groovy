@@ -2,9 +2,7 @@ package org.avaje.ebean.gradle
 
 import io.ebean.enhance.Transformer
 import io.ebean.enhance.common.InputStreamTransform
-
 import org.avaje.ebean.gradle.util.ClassUtils
-import org.avaje.ebean.gradle.util.EnhancementFileFilter
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
@@ -20,43 +18,29 @@ class EbeanEnhancer {
    */
   private final Path outputDir
 
-  private final FileFilter fileFilter
-
   private final Transformer combinedTransform
 
   private final ClassLoader classLoader
 
-  EbeanEnhancer(Path outputDir, URL[] extraClassPath, ClassLoader classLoader, EnhancePluginExtension params) {
+  EbeanEnhancer(Path outputDir, URL[] extraClassPath, ClassLoader contextLoader, EnhancePluginExtension params) {
 
     logger.info('Calling enhancer' + outputDir + ':' + extraClassPath)
     this.outputDir = outputDir
-    this.fileFilter = new EnhancementFileFilter(outputDir, params.packages)
-    this.classLoader = new URLClassLoader(extraClassPath, classLoader)
+    this.classLoader = new URLClassLoader(extraClassPath, contextLoader)
 
     def args = "debug=" + params.debugLevel
-
     this.combinedTransform = new Transformer(classLoader, args)
   }
 
   void enhance() {
-
     collectClassFiles(outputDir.toFile()).each { classFile ->
-      logger.info('Filter classFile: ' + classFile)
-      if (fileFilter.accept(classFile)) {
-        logger.info('Enhancing: ' + classFile)
-        enhanceClassFile(classFile)
-      }
+      enhanceClassFile(classFile)
     }
   }
 
   private void enhanceClassFile(File classFile) {
 
-    if (logger.isTraceEnabled()) {
-      logger.trace("trying to enhance $classFile.absolutePath")
-    }
-
     def className = ClassUtils.makeClassName(outputDir, classFile)
-
     if (isIgnorableClass(className)) {
       return
     }
@@ -69,7 +53,8 @@ class EbeanEnhancer {
         // Make sure to close the stream otherwise classFile.delete() returns false on Windows
         classInputStream.close()
 
-        byte[] response = combinedTransform.transform(classLoader, className, null, null, classBytes)
+        String jvmClassName = className.replace('.','/')
+        byte[] response = combinedTransform.transform(classLoader, jvmClassName, null, null, classBytes)
 
         if (response != null) {
           try {
