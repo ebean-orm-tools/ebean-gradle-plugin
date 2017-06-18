@@ -1,17 +1,17 @@
 group 'io.ebean'
-version '10.2.1'
+version '10.2.2'
 
 apply plugin: 'groovy'
 apply plugin: 'maven'
 apply plugin: 'signing'
 
 repositories {
-    //mavenLocal()
+    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
-    compile group: 'io.ebean', name: 'ebean-agent', version: '10.2.1'
+    compile group: 'io.ebean', name: 'ebean-agent', version: '10.3.1'
 
     compile gradleApi()
     compile localGroovy()

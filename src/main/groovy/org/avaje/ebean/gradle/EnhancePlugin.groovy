@@ -18,7 +18,7 @@ class EnhancePlugin implements Plugin<Project> {
   private final Logger logger = Logging.getLogger(EnhancePlugin.class)
 
   private static def supportedCompilerTasks = [
-    'compileKotlinAfterJava', 'compileJava', 'compileKotlin', 'compileGroovy',
+    'compileKotlinAfterJava', 'compileJava', 'compileKotlin', 'compileGroovy', 'copyMainKotlinClasses', 'classes',
     'compileScala', 'compileTestJava', 'compileTestKotlin', 'compileTestGroovy']
 
   void apply(Project project) {
@@ -28,7 +28,7 @@ class EnhancePlugin implements Plugin<Project> {
     // delay the registration of the various compile task.doLast hooks
     project.afterEvaluate({
 
-      def extension = project.extensions.findByType(EnhancePluginExtension)
+      EnhancePluginExtension extension = project.extensions.findByType(EnhancePluginExtension)
       logger.debug("EnhancePlugin apply")
 
       if (extension.queryBeans) {
@@ -38,6 +38,14 @@ class EnhancePlugin implements Plugin<Project> {
       def tasks = project.tasks
       supportedCompilerTasks.each { compileTask ->
         tryHookCompilerTask(tasks, compileTask, project, params)
+      }
+
+      def testTask = project.tasks.getByName('test')
+      testTask.doFirst {
+        println("enhancement prior to running tests")
+        enhanceDirectory(project, extension, "$project.buildDir/classes/main/")
+        enhanceDirectory(project, extension, "$project.buildDir/kotlin-classes/main/")
+        enhanceDirectory(project, extension, "$project.buildDir/classes/test/")
       }
     })
   }
@@ -50,31 +58,42 @@ class EnhancePlugin implements Plugin<Project> {
     logger.info("add querybean-generator")
 
     def deps = project.dependencies
-    // add needed dependencies for apt processing
-    deps.add('apt', "io.ebean:querybean-generator:$params.generatorVersion")
-    deps.add('apt', "io.ebean:ebean-querybean:10.2.1")
-    deps.add('apt', "io.ebean:persistence-api:2.2.1")
+    if (params.kotlin) {
+      // add needed dependencies for apt processing
+      deps.add('kapt', "io.ebean:kotlin-querybean-generator:$params.generatorVersion")
+      deps.add('kapt', "io.ebean:ebean-querybean:10.2.1")
+      deps.add('kapt', "io.ebean:persistence-api:2.2.1")
 
-    String genDir = "$project.projectDir/generated/java"
-
-    def cl = { AbstractCompile task ->
-
-      if (task.getName() != 'compileJava') {
-        return
-      }
-
-      task.options.annotationProcessorPath = project.configurations.apt
-      task.options.compilerArgs << "-s"
-      task.options.compilerArgs << genDir
-
-      task.doFirst {
-        new File(project.projectDir, '/generated/java').mkdirs()
-      }
+    } else {
+      // add needed dependencies for apt processing
+      deps.add('apt', "io.ebean:querybean-generator:$params.generatorVersion")
+      deps.add('apt', "io.ebean:ebean-querybean:10.2.1")
+      deps.add('apt', "io.ebean:persistence-api:2.2.1")
     }
-    project.tasks.withType(JavaCompile, cl)
+
+    String genDir = "$project.projectDir/generated"
+
+    if (params.kotlin) {
+
+    } else {
+      def cl = { AbstractCompile task ->
+
+        if (task.getName() != 'compileJava') {
+          return
+        }
+
+        task.options.annotationProcessorPath = project.configurations.apt
+        task.options.compilerArgs << "-s"
+        task.options.compilerArgs << genDir
+
+        task.doFirst {
+          new File(project.projectDir, '/generated').mkdirs()
+        }
+      }
+      project.tasks.withType(JavaCompile, cl)
+    }
 
     SourceSetContainer sourceSets = (SourceSetContainer)project.getProperties().get("sourceSets")
-
     createSourceSet(project, "generated", genDir, sourceSets.main.runtimeClasspath)
   }
 
@@ -96,7 +115,7 @@ class EnhancePlugin implements Plugin<Project> {
       def task = tasks.getByName(taskName)
 
       task.doLast({ completedTask ->
-        logger.info("perform enhancement for task: $taskName")
+        println("perform enhancement for task: $taskName")
         enhanceTaskOutput(completedTask.outputs, project, params)
       })
     } catch (UnknownTaskException _) {
@@ -106,18 +125,9 @@ class EnhancePlugin implements Plugin<Project> {
 
   private void enhanceTaskOutput(TaskOutputs taskOutputs, Project project, EnhancePluginExtension params) {
 
-    Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
-    def urls = compCP.collect { it.toURI().toURL() }
+    println("enhanceTaskOutput classes in $taskOutputs.files")
 
-    File classesDir = project.sourceSets.main.output.classesDir
-    File resourcesDir = project.sourceSets.main.output.resourcesDir
-    addToClassPath(urls, classesDir)
-    addToClassPath(urls, resourcesDir)
-
-    File kotlinMain = new File(project.buildDir, "kotlin-classes/main")
-    if (kotlinMain.exists() && kotlinMain.isDirectory()) {
-      urls.add(kotlinMain.toURI().toURL())
-    }
+    List<URL> urls = createClassPath(project)
 
     def cxtLoader = Thread.currentThread().getContextClassLoader()
 
@@ -131,10 +141,47 @@ class EnhancePlugin implements Plugin<Project> {
           logger.trace("classpath urls: ${urls}")
         }
 
+        println("enhancement classes in $outputDir")
+
         def urlsArray = urls.toArray(new URL[urls.size()])
         new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
       }
     }
+  }
+  private void enhanceDirectory(Project project, EnhancePluginExtension params, String outputDir) {
+
+    File outDir = new File(outputDir)
+    if (!outDir.exists()) {
+      return
+    }
+
+    List<URL> urls = createClassPath(project)
+
+    def cxtLoader = Thread.currentThread().getContextClassLoader()
+    def path = outDir.toPath()
+
+    println("enhancement classes in $outputDir")
+
+    def urlsArray = urls.toArray(new URL[urls.size()])
+    new EbeanEnhancer(path, urlsArray, cxtLoader, params).enhance()
+  }
+
+
+  private List<URL> createClassPath(Project project) {
+
+    Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
+    List<URL> urls = compCP.collect { it.toURI().toURL() }
+
+    File classesDir = project.sourceSets.main.output.classesDir
+    File resourcesDir = project.sourceSets.main.output.resourcesDir
+    addToClassPath(urls, classesDir)
+    addToClassPath(urls, resourcesDir)
+
+    File kotlinMain = new File(project.buildDir, "kotlin-classes/main")
+    if (kotlinMain.exists() && kotlinMain.isDirectory()) {
+      urls.add(kotlinMain.toURI().toURL())
+    }
+    return urls
   }
 
   static void addToClassPath(List<URL> urls, File file) {

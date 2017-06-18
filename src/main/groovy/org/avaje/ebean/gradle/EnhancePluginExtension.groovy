@@ -16,6 +16,11 @@ class EnhancePluginExtension {
   boolean queryBeans = false
 
   /**
+   *
+   */
+  boolean kotlin = false
+
+  /**
    * querybean-generator version for use when addKapt is true.
    */
   String generatorVersion = '10.2.1'
