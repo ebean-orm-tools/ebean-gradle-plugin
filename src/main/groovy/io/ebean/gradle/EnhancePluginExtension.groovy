@@ -5,23 +5,23 @@ package io.ebean.gradle
  */
 class EnhancePluginExtension {
 
-    /**
-     * Packages to enhance.
-     */
-    def String[] packages = []
+  /**
+   * Ebean enhancer debug level
+   */
+  int debugLevel = 0
 
-    /**
-     * Ebean enhancer debug level
-     */
-    def int debugLevel = 0
+  /**
+   * When true registers Java querybean generation.
+   */
+  boolean queryBeans = false
 
-    /**
-     * When true registers KAPT querybean generation (for Kotlin entity beans).
-     */
-    def boolean addKapt = true
+  /**
+   *
+   */
+  boolean kotlin = false
 
-    /**
-     * querybean-generator version for use when addKapt is true.
-     */
-    def String generatorVersion = '8.1.1'
+  /**
+   * querybean-generator version for use when addKapt is true.
+   */
+  String generatorVersion = '10.2.1'
 }

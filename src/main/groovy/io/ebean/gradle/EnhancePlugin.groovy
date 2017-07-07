@@ -5,93 +5,186 @@ import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
+import org.gradle.api.plugins.JavaPluginConvention
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskOutputs
+import org.gradle.api.tasks.compile.AbstractCompile
+import org.gradle.api.tasks.compile.JavaCompile
 
 class EnhancePlugin implements Plugin<Project> {
 
-    private final Logger logger = Logging.getLogger( EnhancePlugin.class );
+  private final Logger logger = Logging.getLogger(EnhancePlugin.class)
 
-    private static def supportedCompilerTasks = ['compileKotlinAfterJava', 'compileJava', 'compileKotlin', 'compileGroovy', 'compileScala', 'compileTestJava', 'compileTestKotlin', 'compileTestGroovy']
+  private static def supportedCompilerTasks = [
+    'compileKotlinAfterJava', 'compileJava', 'compileKotlin', 'compileGroovy', 'copyMainKotlinClasses', 'classes',
+    'compileScala', 'compileTestJava', 'compileTestKotlin', 'compileTestGroovy']
 
-    void apply(Project project) {
+  void apply(Project project) {
 
-        logger.debug('EnhancePlugin configuring...')
+    def params = project.extensions.create("ebean", EnhancePluginExtension)
 
-        project.extensions.create('ebean', EnhancePluginExtension)
+    // delay the registration of the various compile task.doLast hooks
+    project.afterEvaluate({
 
-        // delay the registration of the various compile task.doLast hooks
-        project.afterEvaluate({
-            logger.debug('EnhancePlugin apply...')
+      EnhancePluginExtension extension = project.extensions.findByType(EnhancePluginExtension)
+      logger.debug("EnhancePlugin apply")
 
-            def params = project.extensions['ebean'] as EnhancePluginExtension
-            logger.debug("packages: $params.packages")
-            logger.debug("debugLevel: $params.debugLevel")
-            logger.debug("addKapt: $params.addKapt")
-            logger.debug("generatorVersion: $params.generatorVersion")
+      if (extension.queryBeans) {
+        hookQueryBeans(project, extension)
+      }
 
-            if (params.isAddKapt()) {
-                logger.debug("add kapt for Ebean querybean-generator using version $params.generatorVersion")
+      def tasks = project.tasks
+      supportedCompilerTasks.each { compileTask ->
+        tryHookCompilerTask(tasks, compileTask, project, params)
+      }
 
-                def deps = project.dependencies
-                logger.info("not implemented")
-                // add needed dependencies for KAPT processing
-                /* TODO: check if versions and artifacts are up-to-date
-                deps.add('kapt', "io.ebean:ebean-querybean:10.1.1")
-                deps.add('kapt', "org.avaje.ebean:querybean-generator:$params.generatorVersion")
-                deps.add('kapt', "javax.persistence:persistence-api:1.0.2")
-                */
-            }
+      def testTask = project.tasks.getByName('test')
+      testTask.doFirst {
+        println("enhancement prior to running tests")
+        enhanceDirectory(project, extension, "$project.buildDir/classes/main/")
+        enhanceDirectory(project, extension, "$project.buildDir/kotlin-classes/main/")
+        enhanceDirectory(project, extension, "$project.buildDir/classes/test/")
+      }
+    })
+  }
 
-            def tasks = project.tasks
-            supportedCompilerTasks.each { compileTask ->
-                tryHookCompilerTask(tasks, compileTask, project, params)
-            }
-        });
+  /**
+   * Hook up APT querybean generation.
+   */
+  private void hookQueryBeans(Project project, EnhancePluginExtension params) {
+
+    logger.info("add querybean-generator")
+
+    def deps = project.dependencies
+    if (params.kotlin) {
+      // add needed dependencies for apt processing
+      deps.add('kapt', "io.ebean:kotlin-querybean-generator:$params.generatorVersion")
+      deps.add('kapt', "io.ebean:ebean-querybean:10.2.1")
+      deps.add('kapt', "io.ebean:persistence-api:2.2.1")
+
+    } else {
+      // add needed dependencies for apt processing
+      deps.add('apt', "io.ebean:querybean-generator:$params.generatorVersion")
+      deps.add('apt', "io.ebean:ebean-querybean:10.2.1")
+      deps.add('apt', "io.ebean:persistence-api:2.2.1")
     }
 
-    private void tryHookCompilerTask(TaskContainer tasks, String taskName, Project project, EnhancePluginExtension params) {
-        try {
-            def task = tasks.getByName(taskName)
+    String genDir = "$project.projectDir/generated"
 
-            task.doLast({ completedTask ->
-                logger.debug("perform enhancement for task: $taskName")
-                enhanceTaskOutput(completedTask.outputs, project, params)
-            })
-        } catch (UnknownTaskException _) {
-            ; // ignore as compiler task is not activated
+    if (params.kotlin) {
+
+    } else {
+      def cl = { AbstractCompile task ->
+
+        if (task.getName() != 'compileJava') {
+          return
         }
+
+        task.options.annotationProcessorPath = project.configurations.apt
+        task.options.compilerArgs << "-s"
+        task.options.compilerArgs << genDir
+
+        task.doFirst {
+          new File(project.projectDir, '/generated').mkdirs()
+        }
+      }
+      project.tasks.withType(JavaCompile, cl)
     }
 
-    private void enhanceTaskOutput(TaskOutputs taskOutputs, Project project, EnhancePluginExtension params) {
+    SourceSetContainer sourceSets = (SourceSetContainer)project.getProperties().get("sourceSets")
+    createSourceSet(project, "generated", genDir, sourceSets.main.runtimeClasspath)
+  }
 
-        Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
-        def urls = compCP.collect {it.toURI().toURL()}
+  /**
+   * Create sourceSet for generated source directory.
+   */
+  SourceSet createSourceSet(Project project, String name, String outputDir, Object cp) {
 
-        File kotlinMain = new File(project.buildDir, "kotlin-classes/main")
-        if (kotlinMain.exists() && kotlinMain.isDirectory()) {
-            urls.add(kotlinMain.toURI().toURL())
-        }
-
-        def cxtLoader = Thread.currentThread().getContextClassLoader()
-
-        taskOutputs.files.each { outputDir ->
-            if (outputDir.isDirectory()) {
-
-                def output = outputDir.toPath()
-
-                // also add outputDir to the classpath
-                def outputUrl = output.toUri().toURL()
-                urls.add(outputUrl)
-
-                if (logger.isTraceEnabled()) {
-                    logger.trace("classpath urls: ${urls}")
-                }
-
-                def urlsArray = urls.toArray(new URL[urls.size()])
-
-                new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
-            }
-        }
+    JavaPluginConvention javaConvention = project.convention.getPlugin(JavaPluginConvention)
+    SourceSetContainer sourceSets = javaConvention.sourceSets
+    sourceSets.create(name) {
+      output.dir(outputDir)
+      runtimeClasspath = cp
     }
+  }
+
+  private void tryHookCompilerTask(TaskContainer tasks, String taskName, Project project, EnhancePluginExtension params) {
+    try {
+      def task = tasks.getByName(taskName)
+
+      task.doLast({ completedTask ->
+        println("perform enhancement for task: $taskName")
+        enhanceTaskOutput(completedTask.outputs, project, params)
+      })
+    } catch (UnknownTaskException _) {
+      // ignore as compiler task is not activated
+    }
+  }
+
+  private void enhanceTaskOutput(TaskOutputs taskOutputs, Project project, EnhancePluginExtension params) {
+
+    println("enhanceTaskOutput classes in $taskOutputs.files")
+
+    List<URL> urls = createClassPath(project)
+
+    def cxtLoader = Thread.currentThread().getContextClassLoader()
+
+    taskOutputs.files.each { outputDir ->
+      if (outputDir.isDirectory()) {
+
+        // also add outputDir to the classpath
+        def output = outputDir.toPath()
+        urls.add(output.toUri().toURL())
+        if (logger.isTraceEnabled()) {
+          logger.trace("classpath urls: ${urls}")
+        }
+
+        println("enhancement classes in $outputDir")
+
+        def urlsArray = urls.toArray(new URL[urls.size()])
+        new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
+      }
+    }
+  }
+  private void enhanceDirectory(Project project, EnhancePluginExtension params, String outputDir) {
+
+    File outDir = new File(outputDir)
+    if (!outDir.exists()) {
+      return
+    }
+
+    List<URL> urls = createClassPath(project)
+
+    def cxtLoader = Thread.currentThread().getContextClassLoader()
+    def path = outDir.toPath()
+
+    println("enhancement classes in $outputDir")
+
+    def urlsArray = urls.toArray(new URL[urls.size()])
+    new EbeanEnhancer(path, urlsArray, cxtLoader, params).enhance()
+  }
+
+
+  private List<URL> createClassPath(Project project) {
+
+    Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
+    List<URL> urls = compCP.collect { it.toURI().toURL() }
+
+    File classesDir = project.sourceSets.main.output.classesDir
+    File resourcesDir = project.sourceSets.main.output.resourcesDir
+    addToClassPath(urls, classesDir)
+    addToClassPath(urls, resourcesDir)
+
+    File kotlinMain = new File(project.buildDir, "kotlin-classes/main")
+    if (kotlinMain.exists() && kotlinMain.isDirectory()) {
+      urls.add(kotlinMain.toURI().toURL())
+    }
+    return urls
+  }
+
+  static void addToClassPath(List<URL> urls, File file) {
+    urls.add(file.toURI().toURL())
+  }
 }

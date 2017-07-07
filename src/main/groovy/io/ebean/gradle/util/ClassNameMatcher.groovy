@@ -1,15 +1,26 @@
 package io.ebean.gradle.util
 
+import org.gradle.api.logging.Logger
+import org.gradle.api.logging.Logging
 
 class ClassNameMatcher {
 
-    private final String pattern
+  private final static Logger logger = Logging.getLogger(ClassNameMatcher.class)
 
-    ClassNameMatcher(String pattern) {
-        this.pattern = pattern.replace('.','/')
+  private final String pattern
+
+  ClassNameMatcher(String pattern) {
+    this.pattern = pattern.replace('*', '')
+  }
+
+  boolean matches(String className) {
+
+    boolean b = className.startsWith(pattern) || className.endsWith(pattern)
+
+    if (!b) {
+      logger.info('ClassNameMatcher Pattern failed:' + pattern + ' className: ' + className)
     }
 
-    boolean matches(String className) {
-        className.startsWith(pattern) || className.endsWith(pattern)
-    }
+    return b
+  }
 }
