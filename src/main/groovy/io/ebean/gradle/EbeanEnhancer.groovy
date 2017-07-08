@@ -1,10 +1,7 @@
-package org.avaje.ebean.gradle
+package io.ebean.gradle
 
 import io.ebean.enhance.Transformer
 import io.ebean.enhance.common.InputStreamTransform
-import io.ebean.gradle.EnhanceException
-import io.ebean.gradle.EnhancePlugin
-import io.ebean.gradle.EnhancePluginExtension
 import io.ebean.gradle.util.ClassUtils
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
