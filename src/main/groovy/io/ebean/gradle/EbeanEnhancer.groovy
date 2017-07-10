@@ -1,8 +1,8 @@
-package org.avaje.ebean.gradle
+package io.ebean.gradle
 
 import io.ebean.enhance.Transformer
 import io.ebean.enhance.common.InputStreamTransform
-import org.avaje.ebean.gradle.util.ClassUtils
+import io.ebean.gradle.util.ClassUtils
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 
@@ -23,7 +23,6 @@ class EbeanEnhancer {
   private final ClassLoader classLoader
 
   EbeanEnhancer(Path outputDir, URL[] extraClassPath, ClassLoader contextLoader, EnhancePluginExtension params) {
-
     logger.info('Calling enhancer' + outputDir + ':' + extraClassPath)
     this.outputDir = outputDir
     this.classLoader = new URLClassLoader(extraClassPath, contextLoader)
@@ -39,7 +38,6 @@ class EbeanEnhancer {
   }
 
   private void enhanceClassFile(File classFile) {
-
     def className = ClassUtils.makeClassName(outputDir, classFile)
     if (isIgnorableClass(className)) {
       return
@@ -54,6 +52,7 @@ class EbeanEnhancer {
         classInputStream.close()
 
         String jvmClassName = className.replace('.','/')
+        logger.info("Try to enhance $jvmClassName");
         byte[] response = combinedTransform.transform(classLoader, jvmClassName, null, null, classBytes)
 
         if (response != null) {

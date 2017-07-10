@@ -1,4 +1,4 @@
-package org.avaje.ebean.gradle
+package io.ebean.gradle
 
 
 class EnhanceException extends RuntimeException {

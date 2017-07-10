@@ -1,5 +1,5 @@
 group 'io.ebean'
-version '10.2.2'
+version '10.2.3'
 
 apply plugin: 'groovy'
 apply plugin: 'maven'
@@ -37,6 +37,10 @@ signing {
   sign configurations.archives
 }
 
+jar {
+    manifest.attributes provider: 'gradle'
+}
+
 uploadArchives {
   repositories {
     mavenDeployer {
@@ -70,6 +74,10 @@ uploadArchives {
           developer {
             id 'rbygrave'
             name 'Robin Bygrave'
+          }
+          developer {
+            id 'vnnv'
+            name 'Victor Nikiforov'
           }
         }
       }

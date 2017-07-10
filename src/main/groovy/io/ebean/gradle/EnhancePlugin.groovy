@@ -1,8 +1,9 @@
-package org.avaje.ebean.gradle
+package io.ebean.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
+import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaPluginConvention
@@ -18,8 +19,18 @@ class EnhancePlugin implements Plugin<Project> {
   private final Logger logger = Logging.getLogger(EnhancePlugin.class)
 
   private static def supportedCompilerTasks = [
-    'compileKotlinAfterJava', 'compileJava', 'compileKotlin', 'compileGroovy', 'copyMainKotlinClasses', 'classes',
-    'compileScala', 'compileTestJava', 'compileTestKotlin', 'compileTestGroovy']
+    'compileKotlinAfterJava',
+    'compileJava',
+    'processResources',
+    'compileKotlin',
+    'compileGroovy',
+    'copyMainKotlinClasses',
+    'classes',
+    'testClasses',
+    'compileScala',
+    'compileTestJava',
+    'compileTestKotlin',
+    'compileTestGroovy']
 
   void apply(Project project) {
 
@@ -36,6 +47,9 @@ class EnhancePlugin implements Plugin<Project> {
       }
 
       def tasks = project.tasks
+      // processResources task must be run before compileJava so ebean.mf to be in place. Same is valid for tests
+      tasks.findByName("compileJava").mustRunAfter(tasks.findByName("processResources"))
+      tasks.findByName("compileTestJava").mustRunAfter(tasks.findByName("processTestResources"))
       supportedCompilerTasks.each { compileTask ->
         tryHookCompilerTask(tasks, compileTask, project, params)
       }
@@ -125,7 +139,12 @@ class EnhancePlugin implements Plugin<Project> {
 
   private void enhanceTaskOutput(TaskOutputs taskOutputs, Project project, EnhancePluginExtension params) {
 
-    println("enhanceTaskOutput classes in $taskOutputs.files")
+    // for debug
+//    def files = taskOutputs.getFiles()
+//    println ("files are " + files.size())
+//    for (File f : files) {
+//      println("File $f.absolutePath")
+//    }
 
     List<URL> urls = createClassPath(project)
 
@@ -145,6 +164,8 @@ class EnhancePlugin implements Plugin<Project> {
 
         def urlsArray = urls.toArray(new URL[urls.size()])
         new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
+      }else{
+        logger.error("$outputDir is not a directory");
       }
     }
   }
@@ -172,9 +193,15 @@ class EnhancePlugin implements Plugin<Project> {
     Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
     List<URL> urls = compCP.collect { it.toURI().toURL() }
 
-    File classesDir = project.sourceSets.main.output.classesDir
+//    File classesDir = project.sourceSets.main.output.classesDir // Will be removed in Gradle 5.0
+//    addToClassPath(urls, classesDir)
+
     File resourcesDir = project.sourceSets.main.output.resourcesDir
-    addToClassPath(urls, classesDir)
+    // Gradle 4.0+
+    FileCollection classesDirs = project.sourceSets.main.output.classesDirs
+    for (File f : classesDirs) {
+      addToClassPath(urls, f)
+    }
     addToClassPath(urls, resourcesDir)
 
     File kotlinMain = new File(project.buildDir, "kotlin-classes/main")

@@ -1,4 +1,4 @@
-package org.avaje.ebean.gradle.util
+package io.ebean.gradle.util
 
 import java.nio.file.Path
 import java.nio.file.Paths

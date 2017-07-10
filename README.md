@@ -14,10 +14,10 @@ Plugin that performs Enhancement (entity, transactional, query bean) and can gen
 
 ## Status
 
-Currently using this with entity beans written in Kotlin (rather than Java).  I need to test the Java use.
-There is also an issue with the Ebean IDEA plugin due to the unexpected directory structure (where ebean-typequery.mf goes).
+Currently using this with entity beans written in Kotlin (rather than Java).  
+Tested with java project with gradle sub projects.
 
-## Example build.gradle
+## Example build.gradle (kotlin)
 
 ```groovy
 group 'org.example'
@@ -33,7 +33,7 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "org.avaje.ebean:ebean-gradle-plugin:0.1.1"
+        classpath "io.ebean:ebean-gradle-plugin:10.2.3"
     }
 }
 
@@ -65,8 +65,52 @@ kapt {
 }
 
 ebean {
-    debugLevel = 0 //1 - 9
-    packages = ['org.example']
+    debugLevel = 1 //1 - 9
+}
+
+test {
+    useTestNG()
+    testLogging.showStandardStreams = true
+    testLogging.exceptionFormat = 'full'
+}
+
+```
+## Example build.gradle (java)
+
+```groovy
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+buildscript {
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "io.ebean:ebean-gradle-plugin:10.2.3"
+    }
+}
+
+apply plugin: 'ebean'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+
+dependencies {
+
+    //EBean ORM
+    compile "io.ebean:ebean:10.4.1"
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+
+    testCompile "org.avaje.composite:composite-testing:3.1"
+}
+
+ebean {
+    debugLevel = 1 //1 - 9
 }
 
 test {

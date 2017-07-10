@@ -1,4 +1,4 @@
-package org.avaje.ebean.gradle.util
+package io.ebean.gradle.util
 
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
