@@ -79,10 +79,6 @@ uploadArchives {
             id 'vnnv'
             name 'Victor Nikiforov'
           }
-          developer {
-              id 'ghost81'
-              name 'Iliya Ivanov'
-            }
         }
       }
     }
