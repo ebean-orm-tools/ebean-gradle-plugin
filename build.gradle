@@ -1,5 +1,5 @@
 group 'io.ebean'
-version '10.2.3'
+version '11.5.1'
 
 apply plugin: 'groovy'
 apply plugin: 'maven'
@@ -11,7 +11,7 @@ repositories {
 }
 
 dependencies {
-    compile group: 'io.ebean', name: 'ebean-agent', version: '10.3.1'
+    compile group: 'io.ebean', name: 'ebean-agent', version: '11.5.1'
 
     compile gradleApi()
     compile localGroovy()
