@@ -24,8 +24,8 @@ group 'org.example'
 version '1.0-SNAPSHOT'
 
 buildscript {
-    ext.kotlin_version = '1.0.4'
-    ext.ebean_version = "8.6.2-SNAPSHOT"
+    ext.kotlin_version = '1.2.0'
+    ext.ebean_version = "11.7.1"
     ext.postgresql_driver_version = "9.4.1207.jre7"
 
     repositories {
@@ -52,8 +52,8 @@ sourceSets {
 dependencies {
 
     compile "org.postgresql:postgresql:$postgresql_driver_version"
-    compile "org.avaje.ebean:ebean:$ebean_version"
-    compile "org.avaje.ebean:ebean-querybean:8.4.1"
+    compile "io.ebean:ebean:$ebean_version"
+    compile "io.ebean:ebean-querybean:11.1.1"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
@@ -102,7 +102,7 @@ repositories {
 dependencies {
 
     //EBean ORM
-    compile "io.ebean:ebean:10.4.1"
+    compile "io.ebean:ebean:11.7.1"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
