@@ -3,7 +3,13 @@ version '11.5.1'
 
 apply plugin: 'groovy'
 apply plugin: 'maven'
-apply plugin: 'signing'
+if (project.hasProperty("signing.keyId")) {
+    apply plugin: 'signing'
+    signing {
+        sign configurations.archives
+    }
+}
+
 
 repositories {
     mavenLocal()
@@ -31,10 +37,6 @@ artifacts {
     archives jar
     archives javadocJar
     archives sourcesJar
-}
-
-signing {
-  sign configurations.archives
 }
 
 jar {
