@@ -1,8 +1,21 @@
 group 'io.ebean'
-version '11.5.2'
+version '11.5.3'
+
+buildscript {
+  repositories {
+    maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+  }
+  dependencies {
+    classpath "com.gradle.publish:plugin-publish-plugin:0.9.9"
+  }
+}
 
 apply plugin: 'groovy'
 apply plugin: 'maven'
+apply plugin: "com.gradle.plugin-publish"
+
 if (project.hasProperty("signing.keyId")) {
     apply plugin: 'signing'
     signing {
@@ -12,8 +25,9 @@ if (project.hasProperty("signing.keyId")) {
 
 
 repositories {
-    mavenLocal()
-    mavenCentral()
+  mavenLocal()
+  mavenCentral()
+  jcenter()
 }
 
 dependencies {
@@ -41,6 +55,19 @@ artifacts {
 
 jar {
     manifest.attributes provider: 'gradle'
+}
+
+pluginBundle {
+  website = 'https://ebean-orm.github.io/'
+  vcsUrl = 'https://github.com/ebean-orm-tools/ebean-gradle-plugin'
+  description = 'Ebean ORM'
+  tags = ['Ebean', 'ORM', 'JPA']
+  plugins {
+    ebeanPlugin {
+      id = 'io.ebean'
+      displayName = 'Ebean plugin'
+    }
+  }
 }
 
 uploadArchives {
