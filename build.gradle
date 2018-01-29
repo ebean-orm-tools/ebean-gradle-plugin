@@ -1,5 +1,5 @@
 group 'io.ebean'
-version '11.5.1'
+version '11.5.2'
 
 apply plugin: 'groovy'
 apply plugin: 'maven'

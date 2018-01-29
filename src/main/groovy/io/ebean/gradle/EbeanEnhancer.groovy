@@ -46,13 +46,12 @@ class EbeanEnhancer {
     try {
       classFile.withInputStream { classInputStream ->
 
-        def classBytes = InputStreamTransform.readBytes(classInputStream)
+        byte[] classBytes = InputStreamTransform.readBytes(classInputStream)
 
         // Make sure to close the stream otherwise classFile.delete() returns false on Windows
         classInputStream.close()
 
         String jvmClassName = className.replace('.','/')
-        logger.info("Try to enhance $jvmClassName");
         byte[] response = combinedTransform.transform(classLoader, jvmClassName, null, null, classBytes)
 
         if (response != null) {
@@ -60,6 +59,7 @@ class EbeanEnhancer {
             if (!classFile.delete()) {
               logger.error("Failed to delete enhanced file at $classFile.absolutePath")
             } else {
+              logger.debug("Enhanced $jvmClassName")
               InputStreamTransform.writeBytes(response, classFile)
             }
 
