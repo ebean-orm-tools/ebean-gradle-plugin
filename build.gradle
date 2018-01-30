@@ -1,5 +1,5 @@
 group 'io.ebean'
-version '11.5.3'
+version '11.9.1'
 
 buildscript {
   repositories {
@@ -31,7 +31,7 @@ repositories {
 }
 
 dependencies {
-    compile group: 'io.ebean', name: 'ebean-agent', version: '11.5.1'
+    compile group: 'io.ebean', name: 'ebean-agent', version: '11.9.1'
 
     compile gradleApi()
     compile localGroovy()
