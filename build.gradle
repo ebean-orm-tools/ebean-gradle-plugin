@@ -58,7 +58,7 @@ jar {
 }
 
 pluginBundle {
-  website = 'https://ebean-orm.github.io/'
+  website = 'https://ebean-orm.github.io/docs/tooling/gradle'
   vcsUrl = 'https://github.com/ebean-orm-tools/ebean-gradle-plugin'
   description = 'Ebean ORM'
   tags = ['Ebean', 'ORM', 'JPA']
