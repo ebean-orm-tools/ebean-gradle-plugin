@@ -14,7 +14,7 @@ Plugin that performs Enhancement (entity, transactional, query bean) and can gen
 
 ## Status
 
-Currently using this with entity beans written in Kotlin (rather than Java).  
+Currently using this with entity beans written in Kotlin (rather than Java).
 Tested with java project with gradle sub projects.
 
 ## Example build.gradle (kotlin)
@@ -25,7 +25,7 @@ version '1.0-SNAPSHOT'
 
 buildscript {
     ext.kotlin_version = '1.2.0'
-    ext.ebean_version = "11.7.1"
+    ext.ebean_version = "11.10.6"
     ext.postgresql_driver_version = "9.4.1207.jre7"
 
     repositories {
@@ -87,7 +87,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "io.ebean:ebean-gradle-plugin:10.2.3"
+        classpath "io.ebean:ebean-gradle-plugin:11.9.2"
     }
 }
 
@@ -102,7 +102,7 @@ repositories {
 dependencies {
 
     //EBean ORM
-    compile "io.ebean:ebean:11.7.1"
+    compile "io.ebean:ebean:11.10.6"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
