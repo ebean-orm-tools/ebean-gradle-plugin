@@ -23,5 +23,5 @@ class EnhancePluginExtension {
   /**
    * querybean-generator version for use when addKapt is true.
    */
-  String generatorVersion = '10.2.1'
+  String generatorVersion = '11.1.1'
 }

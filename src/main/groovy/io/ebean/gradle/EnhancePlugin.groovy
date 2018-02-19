@@ -3,7 +3,6 @@ package io.ebean.gradle
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
-import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaPluginConvention
@@ -40,7 +39,7 @@ class EnhancePlugin implements Plugin<Project> {
     project.afterEvaluate({
 
       EnhancePluginExtension extension = project.extensions.findByType(EnhancePluginExtension)
-      logger.debug("EnhancePlugin apply")
+      logger.info("EnhancePlugin apply")
 
       if (extension.queryBeans) {
         hookQueryBeans(project, extension)
@@ -90,7 +89,7 @@ class EnhancePlugin implements Plugin<Project> {
     if (params.kotlin) {
 
     } else {
-      def cl = { AbstractCompile task ->
+      Closure cl = { AbstractCompile task ->
 
         if (task.getName() != 'compileJava') {
           return
@@ -129,22 +128,15 @@ class EnhancePlugin implements Plugin<Project> {
       def task = tasks.getByName(taskName)
 
       task.doLast({ completedTask ->
-        println("perform enhancement for task: $taskName")
+        logger.info("perform enhancement for task: $taskName")
         enhanceTaskOutput(completedTask.outputs, project, params)
       })
-    } catch (UnknownTaskException _) {
-      // ignore as compiler task is not activated
+    } catch (UnknownTaskException e) {
+      logger.debug("Ignore as compiler task is not activated " + e.message)
     }
   }
 
   private void enhanceTaskOutput(TaskOutputs taskOutputs, Project project, EnhancePluginExtension params) {
-
-    // for debug
-//    def files = taskOutputs.getFiles()
-//    println ("files are " + files.size())
-//    for (File f : files) {
-//      println("File $f.absolutePath")
-//    }
 
     List<URL> urls = createClassPath(project)
 
@@ -160,12 +152,10 @@ class EnhancePlugin implements Plugin<Project> {
           logger.trace("classpath urls: ${urls}")
         }
 
-        println("enhancement classes in $outputDir")
-
         def urlsArray = urls.toArray(new URL[urls.size()])
         new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
-      }else{
-        logger.error("$outputDir is not a directory");
+      } else {
+        logger.error("$outputDir is not a directory")
       }
     }
   }
@@ -193,15 +183,11 @@ class EnhancePlugin implements Plugin<Project> {
     Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
     List<URL> urls = compCP.collect { it.toURI().toURL() }
 
-//    File classesDir = project.sourceSets.main.output.classesDir // Will be removed in Gradle 5.0
-//    addToClassPath(urls, classesDir)
-
     File resourcesDir = project.sourceSets.main.output.resourcesDir
-    // Gradle 4.0+
-    FileCollection classesDirs = project.sourceSets.main.output.classesDirs
-    for (File f : classesDirs) {
-      addToClassPath(urls, f)
-    }
+    logger.debug("resourcesDir" + resourcesDir)
+    File outDir = project.sourceSets.main.output.classesDir
+    logger.debug("classesDir" + outDir)
+    addToClassPath(urls, outDir)
     addToClassPath(urls, resourcesDir)
 
     File kotlinMain = new File(project.buildDir, "kotlin-classes/main")
