@@ -3,11 +3,15 @@
 Credit goes to khomich for his work https://github.com/khomich/gradle-ebean-enhancer - this plugin is based off that
 (with updated enhancement, kapt support etc).
 
+# Documentation
+
+Refer to http://ebean-orm.github.io/docs/tooling/gradle
+
 # ebean-gradle-plugin
 Plugin that performs Enhancement (entity, transactional, query bean) and can generate query beans from entity beans written in Kotlin via kapt.
 
 - Add `ebean-gradle-plugin` to buildscript/dependencies/classpath
-- Add `apply plugin: 'ebean'`
+- Add `apply plugin: 'io.ebean'`
 - Add `generated/source/kapt/main` to sourceSets
 - Add kapt generateStubs = true
 - Add ebean plugin configuration
@@ -25,7 +29,7 @@ version '1.0-SNAPSHOT'
 
 buildscript {
     ext.kotlin_version = '1.2.0'
-    ext.ebean_version = "11.7.1"
+    ext.ebean_version = "11.11.1"
     ext.postgresql_driver_version = "9.4.1207.jre7"
 
     repositories {
@@ -33,12 +37,12 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "io.ebean:ebean-gradle-plugin:10.2.3"
+        classpath "io.ebean:ebean-gradle-plugin:11.9.1"
     }
 }
 
 apply plugin: 'kotlin'
-apply plugin: 'ebean'
+apply plugin: 'io.ebean'
 
 repositories {
     mavenLocal()
@@ -53,7 +57,7 @@ dependencies {
 
     compile "org.postgresql:postgresql:$postgresql_driver_version"
     compile "io.ebean:ebean:$ebean_version"
-    compile "io.ebean:ebean-querybean:11.1.1"
+    compile "io.ebean:ebean-querybean:11.2.1"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
@@ -87,11 +91,11 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "io.ebean:ebean-gradle-plugin:10.2.3"
+        classpath "io.ebean:ebean-gradle-plugin:11.9.1"
     }
 }
 
-apply plugin: 'ebean'
+apply plugin: 'io.ebean'
 
 repositories {
     mavenLocal()
@@ -101,8 +105,7 @@ repositories {
 
 dependencies {
 
-    //EBean ORM
-    compile "io.ebean:ebean:11.7.1"
+    compile "io.ebean:ebean:11.11.1"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
