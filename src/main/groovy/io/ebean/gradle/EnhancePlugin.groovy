@@ -11,6 +11,7 @@ import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.TaskOutputs
 import org.gradle.api.tasks.compile.AbstractCompile
+import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
 
 class EnhancePlugin implements Plugin<Project> {
@@ -32,7 +33,6 @@ class EnhancePlugin implements Plugin<Project> {
     'compileTestGroovy']
 
   void apply(Project project) {
-
     def params = project.extensions.create("ebean", EnhancePluginExtension)
 
     // delay the registration of the various compile task.doLast hooks
@@ -67,7 +67,6 @@ class EnhancePlugin implements Plugin<Project> {
    * Hook up APT querybean generation.
    */
   private void hookQueryBeans(Project project, EnhancePluginExtension params) {
-
     logger.info("add querybean-generator")
 
     def deps = project.dependencies
@@ -90,8 +89,7 @@ class EnhancePlugin implements Plugin<Project> {
 
     } else {
       Closure cl = { AbstractCompile task ->
-
-        if (task.getName() != 'compileJava') {
+        if (!(task.name in ['compileJava', 'compileGroovy'])) {
           return
         }
 
@@ -103,7 +101,10 @@ class EnhancePlugin implements Plugin<Project> {
           new File(project.projectDir, '/generated').mkdirs()
         }
       }
-      project.tasks.withType(JavaCompile, cl)
+      
+      [JavaCompile, GroovyCompile].each { Class type ->
+        project.tasks.withType(type, cl)
+      }
     }
 
     SourceSetContainer sourceSets = (SourceSetContainer)project.getProperties().get("sourceSets")
