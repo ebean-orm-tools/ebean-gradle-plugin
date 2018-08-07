@@ -18,6 +18,9 @@ class EnhancePlugin implements Plugin<Project> {
 
   private final Logger logger = Logging.getLogger(EnhancePlugin.class)
 
+  private def outputDirs = new HashMap<Project, Set<File>>()
+  private def testOutputDirs = new HashMap<Project, Set<File>>()
+
   private static def supportedCompilerTasks = [
     'compileKotlinAfterJava',
     'compileJava',
@@ -30,7 +33,9 @@ class EnhancePlugin implements Plugin<Project> {
     'compileScala',
     'compileTestJava',
     'compileTestKotlin',
-    'compileTestGroovy']
+    'compileTestGroovy',
+    'compileTestScala'
+  ]
 
   void apply(Project project) {
     def params = project.extensions.create("ebean", EnhancePluginExtension)
@@ -130,36 +135,63 @@ class EnhancePlugin implements Plugin<Project> {
 
       task.doLast({ completedTask ->
         logger.info("perform enhancement for task: $taskName")
-        enhanceTaskOutput(completedTask.outputs, project, params)
+        recordTaskOutputs(completedTask.outputs, project, taskName)
+        enhanceTaskOutputs(project, params, taskName)
       })
     } catch (UnknownTaskException e) {
       logger.debug("Ignore as compiler task is not activated " + e.message)
     }
   }
 
-  private void enhanceTaskOutput(TaskOutputs taskOutputs, Project project, EnhancePluginExtension params) {
+  private void recordTaskOutputs(TaskOutputs taskOutputs, Project project, String taskName) {
 
-    List<URL> urls = createClassPath(project)
-
-    def cxtLoader = Thread.currentThread().getContextClassLoader()
-
-    taskOutputs.files.each { outputDir ->
-      if (outputDir.isDirectory()) {
-
-        // also add outputDir to the classpath
-        def output = outputDir.toPath()
-        urls.add(output.toUri().toURL())
-        if (logger.isTraceEnabled()) {
-          logger.trace("classpath urls: ${urls}")
-        }
-
-        def urlsArray = urls.toArray(new URL[urls.size()])
-        new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
+    Set<File> projectOutputDirs
+    if (taskName.toLowerCase(Locale.US).contains("test")) {
+      projectOutputDirs = testOutputDirs.computeIfAbsent(project, { new HashSet<File>() })
+    } else {
+      projectOutputDirs = outputDirs.computeIfAbsent(project, { new HashSet<File>() })
+    }
+    taskOutputs.files.each { taskOutputDir ->
+      if (taskOutputDir.isDirectory()) {
+        projectOutputDirs.add(taskOutputDir)
       } else {
-        logger.error("$outputDir is not a directory")
+        logger.error("$taskOutputDir is not a directory")
       }
     }
   }
+
+  private void enhanceTaskOutputs(Project project, EnhancePluginExtension params, String taskName) {
+    def cxtLoader = Thread.currentThread().getContextClassLoader()
+    Set<File> projectOutputDirs
+    switch (taskName) {
+      case "classes":
+        projectOutputDirs = outputDirs.computeIfAbsent(project, { new HashSet<File>() })
+        break
+      case "testClasses":
+        projectOutputDirs = testOutputDirs.computeIfAbsent(project, { new HashSet<File>() })
+        break
+      default:
+        return
+    }
+
+
+
+    List<URL> urls = createClassPath(project)
+    projectOutputDirs.each { urls.add(it.toURI().toURL()) }
+
+    projectOutputDirs.each { outputDir ->
+      // also add outputDir to the classpath
+      def output = outputDir.toPath()
+      urls.add(output.toUri().toURL())
+      if (logger.isTraceEnabled()) {
+        logger.trace("classpath urls: ${urls}")
+      }
+
+      def urlsArray = urls.toArray(new URL[urls.size()])
+      new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
+    }
+  }
+
   private void enhanceDirectory(Project project, EnhancePluginExtension params, String outputDir) {
 
     File outDir = new File(outputDir)
