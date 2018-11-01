@@ -3,6 +3,7 @@ package io.ebean.gradle
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.UnknownTaskException
+import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.plugins.JavaPluginConvention
@@ -101,7 +102,7 @@ class EnhancePlugin implements Plugin<Project> {
           new File(project.projectDir, '/generated').mkdirs()
         }
       }
-      
+
       [JavaCompile, GroovyCompile].each { Class type ->
         project.tasks.withType(type, cl)
       }
@@ -186,10 +187,13 @@ class EnhancePlugin implements Plugin<Project> {
 
     File resourcesDir = project.sourceSets.main.output.resourcesDir
     logger.debug("resourcesDir" + resourcesDir)
-    File outDir = project.sourceSets.main.output.classesDir
-    logger.debug("classesDir" + outDir)
-    addToClassPath(urls, outDir)
-    addToClassPath(urls, resourcesDir)
+
+    FileCollection outDirs = project.sourceSets.main.output.classesDirs
+    outDirs.each { outputDir ->
+      logger.debug("classesDir" + outputDir)
+      addToClassPath(urls, outputDir)
+      addToClassPath(urls, outputDir)
+    }
 
     File kotlinMain = new File(project.buildDir, "kotlin-classes/main")
     if (kotlinMain.exists() && kotlinMain.isDirectory()) {
