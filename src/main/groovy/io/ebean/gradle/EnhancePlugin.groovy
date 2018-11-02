@@ -20,18 +20,29 @@ class EnhancePlugin implements Plugin<Project> {
   private final Logger logger = Logging.getLogger(EnhancePlugin.class)
 
   private static def supportedCompilerTasks = [
-    'compileKotlinAfterJava',
-    'compileJava',
     'processResources',
+    'compileJava',
     'compileKotlin',
     'compileGroovy',
+    'compileScala',
+    'compileKotlinAfterJava',
     'copyMainKotlinClasses',
     'classes',
     'testClasses',
-    'compileScala',
     'compileTestJava',
     'compileTestKotlin',
-    'compileTestGroovy']
+    'compileTestGroovy',
+    'compileTestScala']
+
+  /**
+   * Output directories containing classes we want to run enhancement on.
+   */
+  private def outputDirs = new HashMap<Project, Set<File>>()
+
+  /**
+   * Test output directories containing classes we want to run enhancement on.
+   */
+  private def testOutputDirs = new HashMap<Project, Set<File>>()
 
   void apply(Project project) {
     def params = project.extensions.create("ebean", EnhancePluginExtension)
@@ -56,7 +67,7 @@ class EnhancePlugin implements Plugin<Project> {
 
       def testTask = project.tasks.getByName('test')
       testTask.doFirst {
-        println("enhancement prior to running tests")
+        logger.debug("enhancement prior to running tests")
         enhanceDirectory(project, extension, "$project.buildDir/classes/main/")
         enhanceDirectory(project, extension, "$project.buildDir/kotlin-classes/main/")
         enhanceDirectory(project, extension, "$project.buildDir/classes/test/")
@@ -74,13 +85,13 @@ class EnhancePlugin implements Plugin<Project> {
     if (params.kotlin) {
       // add needed dependencies for apt processing
       deps.add('kapt', "io.ebean:kotlin-querybean-generator:$params.generatorVersion")
-      deps.add('kapt', "io.ebean:ebean-querybean:10.2.1")
+      deps.add('kapt', "io.ebean:ebean-querybean:11.24.1")
       deps.add('kapt', "io.ebean:persistence-api:2.2.1")
 
     } else {
       // add needed dependencies for apt processing
       deps.add('apt', "io.ebean:querybean-generator:$params.generatorVersion")
-      deps.add('apt', "io.ebean:ebean-querybean:10.2.1")
+      deps.add('apt', "io.ebean:ebean-querybean:11.24.1")
       deps.add('apt', "io.ebean:persistence-api:2.2.1")
     }
 
@@ -130,37 +141,65 @@ class EnhancePlugin implements Plugin<Project> {
       def task = tasks.getByName(taskName)
 
       task.doLast({ completedTask ->
-        logger.info("perform enhancement for task: $taskName")
-        enhanceTaskOutput(completedTask.outputs, project, params)
+        recordTaskOutputs(completedTask.outputs, project, taskName)
+        enhanceTaskOutputs(project, params, taskName)
       })
     } catch (UnknownTaskException e) {
       logger.debug("Ignore as compiler task is not activated " + e.message)
     }
   }
 
-  private void enhanceTaskOutput(TaskOutputs taskOutputs, Project project, EnhancePluginExtension params) {
+  /**
+   * Record and collect the output directories for use with enhancement later.
+   */
+  private void recordTaskOutputs(TaskOutputs taskOutputs, Project project, String taskName) {
 
-    List<URL> urls = createClassPath(project)
-
-    def cxtLoader = Thread.currentThread().getContextClassLoader()
-
-    taskOutputs.files.each { outputDir ->
-      if (outputDir.isDirectory()) {
-
-        // also add outputDir to the classpath
-        def output = outputDir.toPath()
-        urls.add(output.toUri().toURL())
-        if (logger.isTraceEnabled()) {
-          logger.trace("classpath urls: ${urls}")
-        }
-
-        def urlsArray = urls.toArray(new URL[urls.size()])
-        new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
+    Set<File> projectOutputDirs
+    if (taskName.toLowerCase(Locale.US).contains("test")) {
+      projectOutputDirs = testOutputDirs.computeIfAbsent(project, { new HashSet<File>() })
+    } else {
+      projectOutputDirs = outputDirs.computeIfAbsent(project, { new HashSet<File>() })
+    }
+    taskOutputs.files.each { taskOutputDir ->
+      if (taskOutputDir.isDirectory()) {
+        projectOutputDirs.add(taskOutputDir)
       } else {
-        logger.error("$outputDir is not a directory")
+        logger.error("$taskOutputDir is not a directory")
       }
     }
   }
+
+  /**
+   * Perform the enhancement for the classes and testClasses tasks only (otherwise skip).
+   */
+  private void enhanceTaskOutputs(Project project, EnhancePluginExtension params, String taskName) {
+
+    Set<File> projectOutputDirs
+    switch (taskName) {
+      case "classes":
+        projectOutputDirs = outputDirs.computeIfAbsent(project, { new HashSet<File>() })
+        break
+      case "testClasses":
+        projectOutputDirs = testOutputDirs.computeIfAbsent(project, { new HashSet<File>() })
+        break
+      default:
+        return
+    }
+
+    logger.debug("perform enhancement for task: $taskName")
+    List<URL> urls = createClassPath(project)
+    def cxtLoader = Thread.currentThread().getContextClassLoader()
+
+    projectOutputDirs.each { urls.add(it.toURI().toURL()) }
+    projectOutputDirs.each { outputDir ->
+      // also add outputDir to the classpath
+      def output = outputDir.toPath()
+      urls.add(output.toUri().toURL())
+      def urlsArray = urls.toArray(new URL[urls.size()])
+      new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
+    }
+  }
+
   private void enhanceDirectory(Project project, EnhancePluginExtension params, String outputDir) {
 
     File outDir = new File(outputDir)
@@ -173,8 +212,6 @@ class EnhancePlugin implements Plugin<Project> {
     def cxtLoader = Thread.currentThread().getContextClassLoader()
     def path = outDir.toPath()
 
-    println("enhancement classes in $outputDir")
-
     def urlsArray = urls.toArray(new URL[urls.size()])
     new EbeanEnhancer(path, urlsArray, cxtLoader, params).enhance()
   }
@@ -185,12 +222,8 @@ class EnhancePlugin implements Plugin<Project> {
     Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
     List<URL> urls = compCP.collect { it.toURI().toURL() }
 
-    File resourcesDir = project.sourceSets.main.output.resourcesDir
-    logger.debug("resourcesDir" + resourcesDir)
-
     FileCollection outDirs = project.sourceSets.main.output.classesDirs
     outDirs.each { outputDir ->
-      logger.debug("classesDir" + outputDir)
       addToClassPath(urls, outputDir)
       addToClassPath(urls, outputDir)
     }
