@@ -117,10 +117,11 @@ class EnhancePlugin implements Plugin<Project> {
       [JavaCompile, GroovyCompile].each { Class type ->
         project.tasks.withType(type, cl)
       }
+
+      SourceSetContainer sourceSets = (SourceSetContainer)project.getProperties().get("sourceSets")
+      createSourceSet(project, "generated", genDir, sourceSets.main.runtimeClasspath)
     }
 
-    SourceSetContainer sourceSets = (SourceSetContainer)project.getProperties().get("sourceSets")
-    createSourceSet(project, "generated", genDir, sourceSets.main.runtimeClasspath)
   }
 
   /**
