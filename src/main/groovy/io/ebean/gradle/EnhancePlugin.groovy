@@ -10,7 +10,6 @@ import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.TaskOutputs
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
@@ -37,12 +36,12 @@ class EnhancePlugin implements Plugin<Project> {
   /**
    * Output directories containing classes we want to run enhancement on.
    */
-  private def outputDirs = new HashMap<Project, Set<File>>()
+  private def outputDirs = new HashMap<Project, Set<File>>().withDefault { [] }
 
   /**
    * Test output directories containing classes we want to run enhancement on.
    */
-  private def testOutputDirs = new HashMap<Project, Set<File>>()
+  private def testOutputDirs = new HashMap<Project, Set<File>>().withDefault { [] }
 
   void apply(Project project) {
     def params = project.extensions.create("ebean", EnhancePluginExtension)
@@ -58,6 +57,7 @@ class EnhancePlugin implements Plugin<Project> {
       }
 
       def tasks = project.tasks
+      initializeOutputDirs(project)
       // processResources task must be run before compileJava so ebean.mf to be in place. Same is valid for tests
       tasks.findByName("compileJava").mustRunAfter(tasks.findByName("processResources"))
       tasks.findByName("compileTestJava").mustRunAfter(tasks.findByName("processTestResources"))
@@ -73,6 +73,23 @@ class EnhancePlugin implements Plugin<Project> {
         enhanceDirectory(project, extension, "$project.buildDir/classes/test/")
       }
     })
+  }
+
+  /**
+   * Fetch the output directories, containing the classes to enhance, from the project's sources set.
+   */
+  private void initializeOutputDirs(Project project) {
+    project.sourceSets.each { sourceSet ->
+      def files = sourceSet.output.classesDirs.files as Set<File>
+      testOutputDirs[project] += files.findAll {
+        it.name.contains("test")
+      }
+      outputDirs[project] += files.findAll {
+        it.name.contains("main")
+      }
+    }
+    logger.debug("Test output dirs: $testOutputDirs")
+    logger.debug("Main output dirs: $outputDirs")
   }
 
   /**
@@ -118,7 +135,7 @@ class EnhancePlugin implements Plugin<Project> {
         project.tasks.withType(type, cl)
       }
 
-      SourceSetContainer sourceSets = (SourceSetContainer)project.getProperties().get("sourceSets")
+      SourceSetContainer sourceSets = (SourceSetContainer) project.getProperties().get("sourceSets")
       createSourceSet(project, "generated", genDir, sourceSets.main.runtimeClasspath)
     }
 
@@ -142,31 +159,10 @@ class EnhancePlugin implements Plugin<Project> {
       def task = tasks.getByName(taskName)
 
       task.doLast({ completedTask ->
-        recordTaskOutputs(completedTask.outputs, project, taskName)
         enhanceTaskOutputs(project, params, taskName)
       })
     } catch (UnknownTaskException e) {
       logger.debug("Ignore as compiler task is not activated " + e.message)
-    }
-  }
-
-  /**
-   * Record and collect the output directories for use with enhancement later.
-   */
-  private void recordTaskOutputs(TaskOutputs taskOutputs, Project project, String taskName) {
-
-    Set<File> projectOutputDirs
-    if (taskName.toLowerCase(Locale.US).contains("test")) {
-      projectOutputDirs = testOutputDirs.computeIfAbsent(project, { new HashSet<File>() })
-    } else {
-      projectOutputDirs = outputDirs.computeIfAbsent(project, { new HashSet<File>() })
-    }
-    taskOutputs.files.each { taskOutputDir ->
-      if (taskOutputDir.isDirectory()) {
-        projectOutputDirs.add(taskOutputDir)
-      } else {
-        logger.error("$taskOutputDir is not a directory")
-      }
     }
   }
 
