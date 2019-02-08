@@ -68,9 +68,13 @@ class EnhancePlugin implements Plugin<Project> {
       def testTask = project.tasks.getByName('test')
       testTask.doFirst {
         logger.debug("enhancement prior to running tests")
-        enhanceDirectory(project, extension, "$project.buildDir/classes/main/")
-        enhanceDirectory(project, extension, "$project.buildDir/kotlin-classes/main/")
-        enhanceDirectory(project, extension, "$project.buildDir/classes/test/")
+
+        List<URL> urls = createClassPath(project)
+        URL[] classpathUrls = urls.toArray(new URL[urls.size()])
+
+        enhanceDirectory(extension, "$project.buildDir/classes/main/", classpathUrls)
+        enhanceDirectory(extension, "$project.buildDir/kotlin-classes/main/", classpathUrls)
+        enhanceDirectory(extension, "$project.buildDir/classes/test/", classpathUrls)
       }
     })
   }
@@ -102,13 +106,13 @@ class EnhancePlugin implements Plugin<Project> {
     if (params.kotlin) {
       // add needed dependencies for apt processing
       deps.add('kapt', "io.ebean:kotlin-querybean-generator:$params.generatorVersion")
-      deps.add('kapt', "io.ebean:ebean-querybean:11.24.1")
+      deps.add('kapt', "io.ebean:ebean-querybean:11.27.1")
       deps.add('kapt', "io.ebean:persistence-api:2.2.1")
 
     } else {
       // add needed dependencies for apt processing
       deps.add('apt', "io.ebean:querybean-generator:$params.generatorVersion")
-      deps.add('apt', "io.ebean:ebean-querybean:11.24.1")
+      deps.add('apt', "io.ebean:ebean-querybean:11.27.1")
       deps.add('apt', "io.ebean:persistence-api:2.2.1")
     }
 
@@ -197,20 +201,15 @@ class EnhancePlugin implements Plugin<Project> {
     }
   }
 
-  private void enhanceDirectory(Project project, EnhancePluginExtension params, String outputDir) {
+  private void enhanceDirectory(EnhancePluginExtension params, String outputDir, URL[] classpathUrls) {
 
     File outDir = new File(outputDir)
     if (!outDir.exists()) {
       return
     }
 
-    List<URL> urls = createClassPath(project)
-
     def cxtLoader = Thread.currentThread().getContextClassLoader()
-    def path = outDir.toPath()
-
-    def urlsArray = urls.toArray(new URL[urls.size()])
-    new EbeanEnhancer(path, urlsArray, cxtLoader, params).enhance()
+    new EbeanEnhancer(outDir.toPath(), classpathUrls, cxtLoader, params).enhance()
   }
 
 
@@ -222,12 +221,16 @@ class EnhancePlugin implements Plugin<Project> {
     FileCollection outDirs = project.sourceSets.main.output.classesDirs
     outDirs.each { outputDir ->
       addToClassPath(urls, outputDir)
-      addToClassPath(urls, outputDir)
+    }
+
+    File resMain = new File(project.buildDir, "resources/main")
+    if (resMain.exists() && resMain.isDirectory()) {
+      addToClassPath(urls, resMain)
     }
 
     File kotlinMain = new File(project.buildDir, "kotlin-classes/main")
     if (kotlinMain.exists() && kotlinMain.isDirectory()) {
-      urls.add(kotlinMain.toURI().toURL())
+      addToClassPath(urls, kotlinMain)
     }
     return urls
   }

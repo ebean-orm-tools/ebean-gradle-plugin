@@ -23,7 +23,7 @@ class EbeanEnhancer {
   private final ClassLoader classLoader
 
   EbeanEnhancer(Path outputDir, URL[] extraClassPath, ClassLoader contextLoader, EnhancePluginExtension params) {
-    logger.info('Calling enhancer' + outputDir + ':' + extraClassPath)
+    logger.info('Calling enhancer outputDir:' + outputDir + '  extraClassPath:' + extraClassPath)
     this.outputDir = outputDir
     this.classLoader = new URLClassLoader(extraClassPath, contextLoader)
 

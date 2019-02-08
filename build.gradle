@@ -1,5 +1,5 @@
 group 'io.ebean'
-version '11.27.1'
+version '11.27.2'
 
 buildscript {
   repositories {
