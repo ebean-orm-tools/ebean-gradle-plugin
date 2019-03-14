@@ -107,13 +107,13 @@ class EnhancePlugin implements Plugin<Project> {
     if (params.kotlin) {
       // add needed dependencies for apt processing
       deps.add('kapt', "io.ebean:kotlin-querybean-generator:$params.generatorVersion")
-      deps.add('kapt', "io.ebean:ebean-querybean:11.34.1")
+      deps.add('kapt', "io.ebean:ebean-querybean:11.36.1")
       deps.add('kapt', "io.ebean:persistence-api:2.2.1")
 
     } else {
       // add needed dependencies for apt processing
       deps.add('apt', "io.ebean:querybean-generator:$params.generatorVersion")
-      deps.add('apt', "io.ebean:ebean-querybean:11.34.1")
+      deps.add('apt', "io.ebean:ebean-querybean:11.36.1")
       deps.add('apt', "io.ebean:persistence-api:2.2.1")
     }
 
