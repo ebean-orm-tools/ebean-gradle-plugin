@@ -2,6 +2,7 @@ package io.ebean.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
 import org.gradle.api.UnknownTaskException
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
@@ -163,7 +164,7 @@ class EnhancePlugin implements Plugin<Project> {
       def task = tasks.getByName(taskName)
 
       task.doLast({ completedTask ->
-        enhanceTaskOutputs(project, params, taskName)
+        enhanceTaskOutputs(project, params, completedTask)
       })
     } catch (UnknownTaskException e) {
       logger.debug("Ignore as compiler task is not activated " + e.message)
@@ -173,21 +174,17 @@ class EnhancePlugin implements Plugin<Project> {
   /**
    * Perform the enhancement for the classes and testClasses tasks only (otherwise skip).
    */
-  private void enhanceTaskOutputs(Project project, EnhancePluginExtension params, String taskName) {
+  private void enhanceTaskOutputs(Project project, EnhancePluginExtension params, Task task) {
 
-    Set<File> projectOutputDirs
-    switch (taskName) {
-      case "classes":
-        projectOutputDirs = outputDirs.computeIfAbsent(project, { new HashSet<File>() })
-        break
-      case "testClasses":
-        projectOutputDirs = testOutputDirs.computeIfAbsent(project, { new HashSet<File>() })
-        break
-      default:
-        return
+    Set<File> projectOutputDirs = new HashSet<>()
+
+    if (task instanceof AbstractCompile) {
+      projectOutputDirs.addAll(task.outputs.files)
+    } else {
+      return
     }
 
-    logger.debug("perform enhancement for task: $taskName")
+    logger.debug("perform enhancement for task: $task")
     List<URL> urls = createClassPath(project)
     def cxtLoader = Thread.currentThread().getContextClassLoader()
 
