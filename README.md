@@ -83,12 +83,34 @@ test {
 
 ##### Using the plugins DSL with Gradle >= 4.6:
 
-The shortest way (if you don't need to specify options for ebean plugin)
+#### The recommended approach.
+1. Use latest version (at a time of writing 11.37.1 or higher)
+2. Use Gradle >= 4.6 and do not use external `apt` plugins as Gradle natively supports `annotationProcessor`
+
+The recommended approach allows a single point of control for all processors.
+Particularly, the recommended approach allow to control the order 
+of execution for processors. For example, if you use framework like Micronaut and Lombok at the same time it is necessary
+that Lombok runs before Micronaut processors.
+See [in Micronaut docs](https://github.com/micronaut-projects/micronaut-core/blob/master/src/main/docs/guide/languageSupport/java.adoc#using-project-lombok).
+The same applies to querybean generation.
+
+__If annotation processor runs behind Gradle ordering - it may lead
+to unpredictable results if you rely on annotation processors extensively.__ 
+Use recommended approach to avoid such cases.
+
 ```groovy
 import versions.* //from buildSrc
 
 plugins {
   id("io.ebean") version "<ebean_version>"
+}
+
+ebean {
+    debugLevel       = 1 //1 - 9
+    // these two options no longer needed. Add "ebean-querybean" and "querybean-generator" to annotationProcessor config as below
+    // to control generation of query beans and versions of dependencies
+//    queryBeans       = true
+//    generatorVersion = "<version>"
 }
 
 dependencies {
@@ -108,7 +130,16 @@ test {
     testLogging.showStandardStreams = true
 }
 ```
-if you still need some to specify options
+
+N.B. With Gradle >= 5.2 you can specify output directory for query bean like so
+```groovy
+compileJava.options.annotationProcessorGeneratedSourcesDirectory = file('generated')
+
+//compileGroovy.options.annotationProcessorGeneratedSourcesDirectory = file('generated')
+``` 
+
+
+For version <= `11.36.1`
 
 ```groovy
 import versions.* //from buildSrc
@@ -124,7 +155,7 @@ ebean {
 }
 
 dependencies {
-    // annotationProcessor(Deps.Libs.EBEAN_ANNOTATION) for ebean-gradle-plugin 11.36.1 and before - uncomment
+    // annotationProcessor(Deps.Libs.EBEAN_ANNOTATION) for ebean-gradle-plugin <= 11.36.1 - uncomment
     
     implementation(Deps.Libs.EBEAN)
     implementation(Deps.Libs.EBEAN_ANNOTATION)
@@ -149,7 +180,7 @@ plugins {
 }
 
 configurations {
-    ebeanApt // for ebean-gradle-plugin 11.36.1 and before - just "apt"
+    ebeanApt // for ebean-gradle-plugin <= 11.36.1 - just "apt"
 }
 
 ebean {
@@ -159,7 +190,7 @@ ebean {
 }
 
 dependencies {
-    // annotationProcessor(Deps.Libs.EBEAN_ANNOTATION) for ebean-gradle-plugin 11.36.1 and before - uncomment
+    // annotationProcessor(Deps.Libs.EBEAN_ANNOTATION) for ebean-gradle-plugin <= 11.36.1  - uncomment
     
     implementation(Deps.Libs.EBEAN)
     implementation(Deps.Libs.EBEAN_ANNOTATION)
