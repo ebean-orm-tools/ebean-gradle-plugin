@@ -14,6 +14,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.util.VersionNumber
 
 class EnhancePlugin implements Plugin<Project> {
 
@@ -103,19 +104,17 @@ class EnhancePlugin implements Plugin<Project> {
   private void hookQueryBeans(Project project, EnhancePluginExtension params) {
     logger.info("add querybean-generator")
 
-    def deps = project.dependencies
-    if (params.kotlin) {
-      // add needed dependencies for apt processing
-      deps.add('kapt', "io.ebean:kotlin-querybean-generator:$params.generatorVersion")
-      deps.add('kapt', "io.ebean:ebean-querybean:11.36.1")
-      deps.add('kapt', "io.ebean:persistence-api:2.2.1")
+    final def configurationName = params.kotlin ? 'kapt' :
+      VersionNumber.parse(project.gradle.gradleVersion) >= VersionNumber.parse( '4.6' )
+        ? 'annotationProcessor'
+        : 'ebeanApt'
 
-    } else {
+    def deps = project.dependencies
       // add needed dependencies for apt processing
-      deps.add('apt', "io.ebean:querybean-generator:$params.generatorVersion")
-      deps.add('apt', "io.ebean:ebean-querybean:11.36.1")
-      deps.add('apt', "io.ebean:persistence-api:2.2.1")
-    }
+      deps.add(configurationName, "io.ebean:querybean-generator:$params.generatorVersion")
+      deps.add(configurationName, "io.ebean:ebean-annotation:4.7")
+//      deps.add(configurationName, "io.ebean:ebean-querybean:11.36.1")
+      deps.add(configurationName, "io.ebean:persistence-api:2.2.1")
 
     String genDir = "$project.projectDir/generated"
 
@@ -127,7 +126,7 @@ class EnhancePlugin implements Plugin<Project> {
           return
         }
 
-        task.options.annotationProcessorPath = project.configurations.apt
+        task.options.annotationProcessorPath = project.configurations.getByName(configurationName)
         task.options.compilerArgs << "-s"
         task.options.compilerArgs << genDir
 

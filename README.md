@@ -81,6 +81,100 @@ test {
 ```
 ## Example build.gradle (java)
 
+##### Using the plugins DSL with Gradle >= 4.6:
+
+The shortest way (if you don't need to specify options for ebean plugin)
+```groovy
+import versions.* //from buildSrc
+
+plugins {
+  id("io.ebean") version "<ebean_version>"
+}
+
+dependencies {
+    annotationProcessor("io.ebean:ebean-annotation:4.7")
+    annotationProcessor("io.ebean:ebean-querybean:<version>")
+    annotationProcessor("io.ebean:persistence-api:2.2.1")
+    annotationProcessor("io.ebean:querybean-generator:<version>")
+    
+    implementation("io.ebean:ebean-annotation:4.7")
+    implementation("io.ebean:ebean-querybean:<version>")
+    implementation("io.ebean:ebean:<ebean_version>")
+    
+    testImplementation("io.ebean.test:ebean-test-config:<version>")
+}
+
+test {
+    testLogging.showStandardStreams = true
+}
+```
+if you still need some to specify options
+
+```groovy
+import versions.* //from buildSrc
+
+plugins {
+  id "io.ebean" version "<ebean_version>"
+}
+
+ebean {
+    debugLevel       = 1 //1 - 9
+    queryBeans       = true
+    generatorVersion = Deps.Versions.EBEAN_QUERY_GEN
+}
+
+dependencies {
+    // annotationProcessor(Deps.Libs.EBEAN_ANNOTATION) for ebean-gradle-plugin 11.36.1 and before - uncomment
+    
+    implementation(Deps.Libs.EBEAN)
+    implementation(Deps.Libs.EBEAN_ANNOTATION)
+    implementation(Deps.Libs.EBEAN_QUERY)
+    
+    testImplementation(Deps.Libs.EBEAN_TEST)
+}
+
+test {
+    testLogging.showStandardStreams = true
+}
+```
+
+##### Using the plugins DSL with Gradle version before 4.6:
+
+
+```groovy
+import versions.* //from buildSrc
+
+plugins {
+  id("io.ebean") version "<ebean_version>"
+}
+
+configurations {
+    ebeanApt // for ebean-gradle-plugin 11.36.1 and before - just "apt"
+}
+
+ebean {
+    debugLevel       = 1 //1 - 9
+    queryBeans       = true
+    generatorVersion = Deps.Versions.EBEAN_QUERY_GEN
+}
+
+dependencies {
+    // annotationProcessor(Deps.Libs.EBEAN_ANNOTATION) for ebean-gradle-plugin 11.36.1 and before - uncomment
+    
+    implementation(Deps.Libs.EBEAN)
+    implementation(Deps.Libs.EBEAN_ANNOTATION)
+    implementation(Deps.Libs.EBEAN_QUERY)
+    
+    testImplementation(Deps.Libs.EBEAN_TEST)
+}
+
+test {
+    testLogging.showStandardStreams = true
+}
+```
+
+#### Using legacy plugin application:
+
 ```groovy
 group 'org.example'
 version '1.0-SNAPSHOT'
@@ -91,7 +185,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "io.ebean:ebean-gradle-plugin:11.12.1"
+        classpath "io.ebean:ebean-gradle-plugin:11.36.1"
     }
 }
 
@@ -105,7 +199,7 @@ repositories {
 
 dependencies {
 
-    compile "io.ebean:ebean:11.24.1"
+    compile "io.ebean:ebean:11.36.1"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
