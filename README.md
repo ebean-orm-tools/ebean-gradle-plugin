@@ -81,6 +81,131 @@ test {
 ```
 ## Example build.gradle (java)
 
+##### Using the plugins DSL with Gradle >= 4.6:
+
+#### The recommended approach.
+1. Use latest version (at a time of writing 11.37.1 or higher)
+2. Use Gradle >= 4.6 and do not use external `apt` plugins as Gradle natively supports `annotationProcessor`
+
+The recommended approach allows a single point of control for all processors.
+Particularly, the recommended approach allow to control the order 
+of execution for processors. For example, if you use framework like Micronaut and Lombok at the same time it is necessary
+that Lombok runs before Micronaut processors.
+See [in Micronaut docs](https://github.com/micronaut-projects/micronaut-core/blob/master/src/main/docs/guide/languageSupport/java.adoc#using-project-lombok).
+The same applies to querybean generation.
+
+__If annotation processor runs behind Gradle ordering - it may lead
+to unpredictable results if you rely on annotation processors extensively.__ 
+Use recommended approach to avoid such cases.
+
+```groovy
+import versions.* //from buildSrc
+
+plugins {
+  id("io.ebean") version "<ebean_version>"
+}
+
+ebean {
+    debugLevel       = 1 //1 - 9
+    // these two options no longer needed. Add "ebean-querybean" and "querybean-generator" to annotationProcessor config as below
+    // to control generation of query beans and versions of dependencies
+//    queryBeans       = true
+//    generatorVersion = "<version>"
+}
+
+dependencies {
+    annotationProcessor("io.ebean:ebean-annotation:4.7")
+    annotationProcessor("io.ebean:ebean-querybean:<version>")
+    annotationProcessor("io.ebean:persistence-api:2.2.1")
+    annotationProcessor("io.ebean:querybean-generator:<version>")
+    
+    implementation("io.ebean:ebean-annotation:4.7")
+    implementation("io.ebean:ebean-querybean:<version>")
+    implementation("io.ebean:ebean:<ebean_version>")
+    
+    testImplementation("io.ebean.test:ebean-test-config:<version>")
+}
+
+test {
+    testLogging.showStandardStreams = true
+}
+```
+
+N.B. With Gradle >= 5.2 you can specify output directory for query bean like so
+```groovy
+compileJava.options.annotationProcessorGeneratedSourcesDirectory = file('generated')
+
+//compileGroovy.options.annotationProcessorGeneratedSourcesDirectory = file('generated')
+``` 
+
+
+For version <= `11.36.1`
+
+```groovy
+import versions.* //from buildSrc
+
+plugins {
+  id "io.ebean" version "<ebean_version>"
+}
+
+ebean {
+    debugLevel       = 1 //1 - 9
+    queryBeans       = true
+    generatorVersion = Deps.Versions.EBEAN_QUERY_GEN
+}
+
+dependencies {
+    // annotationProcessor(Deps.Libs.EBEAN_ANNOTATION) for ebean-gradle-plugin <= 11.36.1 - uncomment
+    
+    implementation(Deps.Libs.EBEAN)
+    implementation(Deps.Libs.EBEAN_ANNOTATION)
+    implementation(Deps.Libs.EBEAN_QUERY)
+    
+    testImplementation(Deps.Libs.EBEAN_TEST)
+}
+
+test {
+    testLogging.showStandardStreams = true
+}
+```
+
+##### Using the plugins DSL with Gradle version before 4.6:
+
+
+```groovy
+import versions.* //from buildSrc
+
+plugins {
+  id("io.ebean") version "<ebean_version>"
+}
+
+configurations {
+    ebeanApt // for ebean-gradle-plugin <= 11.36.1 - just "apt"
+}
+
+ebean {
+    debugLevel       = 1 //1 - 9
+    queryBeans       = true
+    generatorVersion = Deps.Versions.EBEAN_QUERY_GEN
+}
+
+dependencies {
+    // annotationProcessor(Deps.Libs.EBEAN_ANNOTATION) for ebean-gradle-plugin <= 11.36.1  - uncomment
+    
+    implementation(Deps.Libs.EBEAN)
+    implementation(Deps.Libs.EBEAN_ANNOTATION)
+    implementation(Deps.Libs.EBEAN_QUERY)
+    
+    testImplementation(Deps.Libs.EBEAN_TEST)
+}
+
+test {
+    testLogging.showStandardStreams = true
+}
+```
+
+#### Using legacy plugin application:
+
 ```groovy
 group 'org.example'
 version '1.0-SNAPSHOT'
@@ -91,7 +216,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "io.ebean:ebean-gradle-plugin:11.12.1"
+        classpath "io.ebean:ebean-gradle-plugin:11.36.1"
     }
 }
 
@@ -105,7 +230,7 @@ repositories {
 
 dependencies {
 
-    compile "io.ebean:ebean:11.24.1"
+    compile "io.ebean:ebean:11.36.1"
 
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 

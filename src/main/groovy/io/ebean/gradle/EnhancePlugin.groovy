@@ -14,6 +14,7 @@ import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.compile.AbstractCompile
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.util.VersionNumber
 
 class EnhancePlugin implements Plugin<Project> {
 
@@ -53,10 +54,6 @@ class EnhancePlugin implements Plugin<Project> {
       EnhancePluginExtension extension = project.extensions.findByType(EnhancePluginExtension)
       logger.info("EnhancePlugin apply")
 
-      if (extension.queryBeans) {
-        hookQueryBeans(project, extension)
-      }
-
       def tasks = project.tasks
       initializeOutputDirs(project)
       // processResources task must be run before compileJava so ebean.mf to be in place. Same is valid for tests
@@ -95,55 +92,6 @@ class EnhancePlugin implements Plugin<Project> {
     }
     logger.debug("Test output dirs: $testOutputDirs")
     logger.debug("Main output dirs: $outputDirs")
-  }
-
-  /**
-   * Hook up APT querybean generation.
-   */
-  private void hookQueryBeans(Project project, EnhancePluginExtension params) {
-    logger.info("add querybean-generator")
-
-    def deps = project.dependencies
-    if (params.kotlin) {
-      // add needed dependencies for apt processing
-      deps.add('kapt', "io.ebean:kotlin-querybean-generator:$params.generatorVersion")
-      deps.add('kapt', "io.ebean:ebean-querybean:11.36.1")
-      deps.add('kapt', "io.ebean:persistence-api:2.2.1")
-
-    } else {
-      // add needed dependencies for apt processing
-      deps.add('apt', "io.ebean:querybean-generator:$params.generatorVersion")
-      deps.add('apt', "io.ebean:ebean-querybean:11.36.1")
-      deps.add('apt', "io.ebean:persistence-api:2.2.1")
-    }
-
-    String genDir = "$project.projectDir/generated"
-
-    if (params.kotlin) {
-
-    } else {
-      Closure cl = { AbstractCompile task ->
-        if (!(task.name in ['compileJava', 'compileGroovy'])) {
-          return
-        }
-
-        task.options.annotationProcessorPath = project.configurations.apt
-        task.options.compilerArgs << "-s"
-        task.options.compilerArgs << genDir
-
-        task.doFirst {
-          new File(project.projectDir, '/generated').mkdirs()
-        }
-      }
-
-      [JavaCompile, GroovyCompile].each { Class type ->
-        project.tasks.withType(type, cl)
-      }
-
-      SourceSetContainer sourceSets = (SourceSetContainer) project.getProperties().get("sourceSets")
-      createSourceSet(project, "generated", genDir, sourceSets.main.runtimeClasspath)
-    }
-
   }
 
   /**
