@@ -7,14 +7,10 @@ import org.gradle.api.UnknownTaskException
 import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.plugins.JavaPluginConvention
-import org.gradle.api.tasks.SourceSet
-import org.gradle.api.tasks.SourceSetContainer
 import org.gradle.api.tasks.TaskContainer
 import org.gradle.api.tasks.compile.AbstractCompile
-import org.gradle.api.tasks.compile.GroovyCompile
-import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.util.VersionNumber
+
+import java.nio.file.Path
 
 class EnhancePlugin implements Plugin<Project> {
 
@@ -38,12 +34,12 @@ class EnhancePlugin implements Plugin<Project> {
   /**
    * Output directories containing classes we want to run enhancement on.
    */
-  private def outputDirs = new HashMap<Project, Set<File>>().withDefault { [] }
+  private def outputDirs = new HashMap<Project, Set<File>>()
 
   /**
    * Test output directories containing classes we want to run enhancement on.
    */
-  private def testOutputDirs = new HashMap<Project, Set<File>>().withDefault { [] }
+  private def testOutputDirs = new HashMap<Project, Set<File>>()
 
   void apply(Project project) {
     def params = project.extensions.create("ebean", EnhancePluginExtension)
@@ -82,7 +78,7 @@ class EnhancePlugin implements Plugin<Project> {
    */
   private void initializeOutputDirs(Project project) {
     project.sourceSets.each { sourceSet ->
-      def files = sourceSet.output.classesDirs.files as Set<File>
+      Set<File> files = sourceSet.output.classesDirs.files as Set<File>
       testOutputDirs[project] += files.findAll {
         it.name.contains("test")
       }
@@ -94,24 +90,11 @@ class EnhancePlugin implements Plugin<Project> {
     logger.debug("Main output dirs: $outputDirs")
   }
 
-  /**
-   * Create sourceSet for generated source directory.
-   */
-  SourceSet createSourceSet(Project project, String name, String outputDir, Object cp) {
-
-    JavaPluginConvention javaConvention = project.convention.getPlugin(JavaPluginConvention)
-    SourceSetContainer sourceSets = javaConvention.sourceSets
-    sourceSets.create(name) {
-      output.dir(outputDir)
-      runtimeClasspath = cp
-    }
-  }
-
   private void tryHookCompilerTask(TaskContainer tasks, String taskName, Project project, EnhancePluginExtension params) {
     try {
       def task = tasks.getByName(taskName)
 
-      task.doLast({ completedTask ->
+      task.doLast({ Task completedTask ->
         enhanceTaskOutputs(project, params, completedTask)
       })
     } catch (UnknownTaskException e) {
@@ -139,14 +122,14 @@ class EnhancePlugin implements Plugin<Project> {
     projectOutputDirs.each { urls.add(it.toURI().toURL()) }
     projectOutputDirs.each { outputDir ->
       // also add outputDir to the classpath
-      def output = outputDir.toPath()
+      Path output = outputDir.toPath()
       urls.add(output.toUri().toURL())
-      def urlsArray = urls.toArray(new URL[urls.size()])
+      URL[] urlsArray = urls.toArray(new URL[urls.size()])
       new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
     }
   }
 
-  private void enhanceDirectory(EnhancePluginExtension params, String outputDir, URL[] classpathUrls) {
+  private static void enhanceDirectory(EnhancePluginExtension params, String outputDir, URL[] classpathUrls) {
 
     File outDir = new File(outputDir)
     if (!outDir.exists()) {
@@ -158,7 +141,7 @@ class EnhancePlugin implements Plugin<Project> {
   }
 
 
-  private List<URL> createClassPath(Project project) {
+  private static List<URL> createClassPath(Project project) {
 
     Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
     List<URL> urls = compCP.collect { it.toURI().toURL() }

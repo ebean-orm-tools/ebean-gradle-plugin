@@ -1,28 +1,14 @@
+plugins {
+  id 'groovy'
+  id 'java-gradle-plugin'
+  id 'com.gradle.plugin-publish' version '0.10.0'
+  id 'maven-publish'
+}
+
 group 'io.ebean'
-version '11.40.1'
+version '11.41.1'
 
-buildscript {
-  repositories {
-    maven {
-      url "https://plugins.gradle.org/m2/"
-    }
-  }
-  dependencies {
-    classpath "com.gradle.publish:plugin-publish-plugin:0.9.9"
-  }
-}
-
-apply plugin: 'groovy'
-apply plugin: 'maven'
-apply plugin: "com.gradle.plugin-publish"
-
-if (project.hasProperty("signing.keyId")) {
-    apply plugin: 'signing'
-    signing {
-        sign configurations.archives
-    }
-}
-
+sourceCompatibility = 1.8
 
 repositories {
   mavenLocal()
@@ -31,30 +17,10 @@ repositories {
 }
 
 dependencies {
-    compile group: 'io.ebean', name: 'ebean-agent', version: '11.40.1'
+    compile 'io.ebean:ebean-agent:11.41.1'
 
     compile gradleApi()
     compile localGroovy()
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    classifier = 'javadoc'
-    from 'build/docs/javadoc'
-}
-
-task sourcesJar(type: Jar) {
-    from sourceSets.main.allSource
-    classifier = 'sources'
-}
-
-artifacts {
-    archives jar
-    archives javadocJar
-    archives sourcesJar
-}
-
-jar {
-    manifest.attributes provider: 'gradle'
 }
 
 pluginBundle {
@@ -70,46 +36,3 @@ pluginBundle {
   }
 }
 
-uploadArchives {
-  repositories {
-    mavenDeployer {
-      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-        authentication(userName: sonatypeUsername, password: sonatypePassword)
-      }
-
-      pom.project {
-        name 'ebean-gradle-plugin'
-        packaging 'jar'
-        description 'Gradle plugin for enhancement Ebean entity beans'
-        url 'http://github.com/ebean-orm-tools/ebean-gradle-plugin'
-
-        scm {
-          url 'scm:git@github.com/ebean-orm-tools/ebean-gradle-plugin.git'
-          connection 'scm:git@github.com/ebean-orm-tools/ebean-gradle-plugin.git'
-          developerConnection 'scm:git:https://github.com/ebean-orm-tools/ebean-gradle-plugin.git'
-        }
-
-        licenses {
-          license {
-            name 'The Apache Software License, Version 2.0'
-            url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-            distribution 'repo'
-          }
-        }
-
-        developers {
-          developer {
-            id 'rbygrave'
-            name 'Robin Bygrave'
-          }
-          developer {
-            id 'vnnv'
-            name 'Victor Nikiforov'
-          }
-        }
-      }
-    }
-  }
-}
