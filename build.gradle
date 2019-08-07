@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'io.ebean'
-version '11.42.1'
+version '11.42.2'
 
 sourceCompatibility = 1.8
 
