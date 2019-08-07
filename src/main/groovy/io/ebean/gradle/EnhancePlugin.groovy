@@ -34,12 +34,12 @@ class EnhancePlugin implements Plugin<Project> {
   /**
    * Output directories containing classes we want to run enhancement on.
    */
-  private def outputDirs = new HashMap<Project, Set<File>>()
+  private def outputDirs = new HashMap<Project, Set<File>>().withDefault { [] }
 
   /**
    * Test output directories containing classes we want to run enhancement on.
    */
-  private def testOutputDirs = new HashMap<Project, Set<File>>()
+  private def testOutputDirs = new HashMap<Project, Set<File>>().withDefault { [] }
 
   void apply(Project project) {
     def params = project.extensions.create("ebean", EnhancePluginExtension)
