@@ -1,6 +1,7 @@
 package io.ebean.gradle
 
 import io.ebean.enhance.Transformer
+import io.ebean.enhance.common.EnhanceContext
 import io.ebean.enhance.common.InputStreamTransform
 import io.ebean.gradle.util.ClassUtils
 import org.gradle.api.logging.Logger
@@ -20,21 +21,54 @@ class EbeanEnhancer {
 
   private final Transformer combinedTransform
 
+  private final EnhanceContext enhanceContext;
+
   private final ClassLoader classLoader
+
+  private final int debugLevel;
 
   EbeanEnhancer(Path outputDir, URL[] extraClassPath, ClassLoader contextLoader, EnhancePluginExtension params) {
     logger.info('Calling enhancer outputDir:' + outputDir + '  extraClassPath:' + extraClassPath)
     this.outputDir = outputDir
     this.classLoader = new URLClassLoader(extraClassPath, contextLoader)
-
-    def args = "debug=" + params.debugLevel
-    this.combinedTransform = new Transformer(classLoader, args)
+    this.debugLevel = params.debugLevel;
+    this.combinedTransform = new Transformer(classLoader, "debug=" + params.debugLevel)
+    this.enhanceContext = combinedTransform.getEnhanceContext()
+    this.enhanceContext.collectSummary()
   }
 
   void enhance() {
     collectClassFiles(outputDir.toFile()).each { classFile ->
       enhanceClassFile(classFile)
     }
+
+    if (debugLevel > 0) {
+      def summary = enhanceContext.getSummaryInfo()
+      if (!summary.isEmpty()) {
+        if (summary.hasEntities()) {
+          logger.lifecycle("ebean-enhance> " + trim(summary.entities()))
+        }
+        if (summary.hasQueryBeans()) {
+          logger.lifecycle("ebean-enhance> " + trim(summary.queryBeans()))
+        }
+        if (summary.hasTransactional()) {
+          logger.lifecycle("ebean-enhance> " + trim(summary.transactional()))
+        }
+        if (summary.hasQueryCallers()) {
+          logger.lifecycle("ebean-enhance> " + trim(summary.queryCallers()))
+        }
+      }
+    }
+  }
+
+  /**
+   * Trim the output to a max of 290 characters
+   */
+  private static String trim(String val) {
+    if (val.length() > 280) {
+      return val.substring(0, 279) + " ...";
+    }
+    return val;
   }
 
   private void enhanceClassFile(File classFile) {
@@ -51,7 +85,7 @@ class EbeanEnhancer {
         // Make sure to close the stream otherwise classFile.delete() returns false on Windows
         classInputStream.close()
 
-        String jvmClassName = className.replace('.','/')
+        String jvmClassName = className.replace('.', '/')
         byte[] response = combinedTransform.transform(classLoader, jvmClassName, null, null, classBytes)
 
         if (response != null) {
