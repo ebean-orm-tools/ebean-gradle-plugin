@@ -45,17 +45,18 @@ class EbeanEnhancer {
     if (debugLevel > 0) {
       def summary = enhanceContext.getSummaryInfo()
       if (!summary.isEmpty()) {
+        logger.lifecycle('ebean-enhance> loaded resources ' + summary.loadedResources())
         if (summary.hasEntities()) {
-          logger.lifecycle("ebean-enhance> " + trim(summary.entities()))
+          logger.lifecycle('ebean-enhance> ' + trim(summary.entities()))
         }
         if (summary.hasQueryBeans()) {
-          logger.lifecycle("ebean-enhance> " + trim(summary.queryBeans()))
+          logger.lifecycle('ebean-enhance> ' + trim(summary.queryBeans()))
         }
         if (summary.hasTransactional()) {
-          logger.lifecycle("ebean-enhance> " + trim(summary.transactional()))
+          logger.lifecycle('ebean-enhance> ' + trim(summary.transactional()))
         }
         if (summary.hasQueryCallers()) {
-          logger.lifecycle("ebean-enhance> " + trim(summary.queryCallers()))
+          logger.lifecycle('ebean-enhance> ' + trim(summary.queryCallers()))
         }
       }
     }
