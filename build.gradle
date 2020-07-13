@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'io.ebean'
-version '12.3.6'
+version '12.3.7'
 
 sourceCompatibility = 1.8
 
@@ -17,7 +17,7 @@ repositories {
 }
 
 dependencies {
-    compile 'io.ebean:ebean-agent:12.3.6'
+    compile 'io.ebean:ebean-agent:12.3.7'
     compile gradleApi()
     compile localGroovy()
 }
