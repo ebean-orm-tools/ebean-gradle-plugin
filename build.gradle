@@ -25,7 +25,7 @@ dependencies {
 pluginBundle {
   website = 'https://ebean-orm.github.io/docs/tooling/gradle'
   vcsUrl = 'https://github.com/ebean-orm-tools/ebean-gradle-plugin'
-  description = 'Ebean ORM'
+  description = 'Ebean ORM enhancement plugin'
   tags = ['Ebean', 'ORM', 'JPA']
   plugins {
     ebeanPlugin {
