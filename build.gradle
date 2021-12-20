@@ -6,18 +6,17 @@ plugins {
 }
 
 group 'io.ebean'
-version '12.13.2'
+version '12.14.0'
 
 sourceCompatibility = 1.8
 
 repositories {
   mavenLocal()
   mavenCentral()
-  jcenter()
 }
 
 dependencies {
-    compile 'io.ebean:ebean-agent:12.13.2'
+    compile 'io.ebean:ebean-agent:12.14.0'
     compile gradleApi()
     compile localGroovy()
 }
