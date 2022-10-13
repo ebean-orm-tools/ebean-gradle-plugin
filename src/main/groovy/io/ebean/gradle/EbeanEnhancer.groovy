@@ -43,7 +43,7 @@ class EbeanEnhancer {
     }
 
     if (debugLevel > 0) {
-      def summary = enhanceContext.getSummaryInfo()
+      def summary = enhanceContext.summaryInfo()
       if (!summary.isEmpty()) {
         logger.lifecycle('ebean-enhance> loaded resources ' + summary.loadedResources())
         if (summary.hasEntities()) {
@@ -57,6 +57,9 @@ class EbeanEnhancer {
         }
         if (summary.hasQueryCallers()) {
           logger.lifecycle('ebean-enhance> ' + trim(summary.queryCallers()))
+        }
+        if (enhanceContext.isEnableEntityFieldAccess()) {
+          logger.lifecycle('ebean-enhance> ' + trim(summary.fieldAccess()))
         }
       }
     }
