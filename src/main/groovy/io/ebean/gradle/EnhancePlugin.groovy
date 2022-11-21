@@ -169,8 +169,8 @@ class EnhancePlugin implements Plugin<Project> {
   }
 
   static boolean isKotlinCompileTask(String taskName) {
-    return 'compileKotlin'.equalsIgnoreCase(taskName)
-      || 'compileTestKotlin'.equalsIgnoreCase(taskName)
-      || 'compileTestFixturesKotlin'.equalsIgnoreCase(taskName)
+    return 'compileKotlin'.equalsIgnoreCase(taskName) ||
+      'compileTestKotlin'.equalsIgnoreCase(taskName) ||
+      'compileTestFixturesKotlin'.equalsIgnoreCase(taskName)
   }
 }
