@@ -111,15 +111,8 @@ class EnhancePlugin implements Plugin<Project> {
    * Perform the enhancement for the classes and testClasses tasks only (otherwise skip).
    */
   private void enhanceTaskOutputs(Project project, EnhancePluginExtension params, Task task) {
-
     Set<File> projectOutputDirs = new HashSet<>()
-
-    if (
-      task instanceof AbstractCompile ||
-        'compileKotlin'.equalsIgnoreCase(task.name) ||
-        'compileTestKotlin'.equalsIgnoreCase(task.name) ||
-        'compileTestFixturesKotlin'.equalsIgnoreCase(task.name)
-    ) {
+    if (task instanceof AbstractCompile || isKotlinCompileTask(task.name)) {
       projectOutputDirs.addAll(task.outputs.files)
     } else {
       return
@@ -140,7 +133,6 @@ class EnhancePlugin implements Plugin<Project> {
   }
 
   private static void enhanceDirectory(EnhancePluginExtension params, String outputDir, URL[] classpathUrls) {
-
     File outDir = new File(outputDir)
     if (!outDir.exists()) {
       return
@@ -152,7 +144,6 @@ class EnhancePlugin implements Plugin<Project> {
 
 
   private static List<URL> createClassPath(Project project) {
-
     Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
     List<URL> urls = compCP.collect { it.toURI().toURL() }
 
@@ -175,5 +166,11 @@ class EnhancePlugin implements Plugin<Project> {
 
   static void addToClassPath(List<URL> urls, File file) {
     urls.add(file.toURI().toURL())
+  }
+
+  static boolean isKotlinCompileTask(String taskName) {
+    return 'compileKotlin'.equalsIgnoreCase(taskName)
+      || 'compileTestKotlin'.equalsIgnoreCase(taskName)
+      || 'compileTestFixturesKotlin'.equalsIgnoreCase(taskName)
   }
 }
