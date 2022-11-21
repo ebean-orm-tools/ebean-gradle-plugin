@@ -29,7 +29,12 @@ class EnhancePlugin implements Plugin<Project> {
     'compileTestJava',
     'compileTestKotlin',
     'compileTestGroovy',
-    'compileTestScala']
+    'compileTestScala',
+    'compileTestFixturesJava',
+    'compileTestFixturesKotlin',
+    'compileTestFixturesGroovy',
+    'compileTestFixturesScala',
+  ]
 
   /**
    * Output directories containing classes we want to run enhancement on.
@@ -109,7 +114,12 @@ class EnhancePlugin implements Plugin<Project> {
 
     Set<File> projectOutputDirs = new HashSet<>()
 
-    if (task instanceof AbstractCompile || 'compileKotlin'.equalsIgnoreCase(task.name)) {
+    if (
+      task instanceof AbstractCompile ||
+        'compileKotlin'.equalsIgnoreCase(task.name) ||
+        'compileTestKotlin'.equalsIgnoreCase(task.name) ||
+        'compileTestFixturesKotlin'.equalsIgnoreCase(task.name)
+    ) {
       projectOutputDirs.addAll(task.outputs.files)
     } else {
       return
