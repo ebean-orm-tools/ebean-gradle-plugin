@@ -16,9 +16,9 @@ repositories {
 }
 
 dependencies {
-    compile 'io.ebean:ebean-agent:13.11.4'
-    compile gradleApi()
-    compile localGroovy()
+  implementation 'io.ebean:ebean-agent:13.11.4'
+  implementation gradleApi()
+  implementation localGroovy()
 }
 
 pluginBundle {
