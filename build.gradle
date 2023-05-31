@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'io.ebean'
-version '13.17.4'
+version '13.18.0'
 
 sourceCompatibility = 1.8
 
@@ -16,7 +16,7 @@ repositories {
 }
 
 dependencies {
-  implementation 'io.ebean:ebean-agent:13.17.4'
+  implementation 'io.ebean:ebean-agent:13.18.0'
   implementation gradleApi()
   implementation localGroovy()
 }
