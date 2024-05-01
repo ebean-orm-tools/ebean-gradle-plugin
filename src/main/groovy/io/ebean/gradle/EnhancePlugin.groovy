@@ -68,14 +68,18 @@ class EnhancePlugin implements Plugin<Project> {
       testTask.doFirst {
         logger.debug("enhancement prior to running tests")
 
-        List<URL> urls = createClassPath(project)
-        URL[] classpathUrls = urls.toArray(new URL[urls.size()])
-
+        URL[] classpathUrls = toUrlArray(createClassPath(project, 'compileClasspath'))
         enhanceDirectory(extension, "$project.buildDir/classes/main/", classpathUrls)
         enhanceDirectory(extension, "$project.buildDir/kotlin-classes/main/", classpathUrls)
-        enhanceDirectory(extension, "$project.buildDir/classes/test/", classpathUrls)
+
+        URL[] testClasspathUrls = toUrlArray(createClassPath(project, 'testCompileClasspath'))
+        enhanceDirectory(extension, "$project.buildDir/classes/test/", testClasspathUrls)
       }
     })
+  }
+
+  private static URL[] toUrlArray(List<URL> urls) {
+    return urls.toArray(new URL[urls.size()])
   }
 
   /**
@@ -98,7 +102,6 @@ class EnhancePlugin implements Plugin<Project> {
   private void tryHookCompilerTask(TaskContainer tasks, String taskName, Project project, EnhancePluginExtension params) {
     try {
       def task = tasks.getByName(taskName)
-
       task.doLast({ Task completedTask ->
         enhanceTaskOutputs(project, params, completedTask)
       })
@@ -119,7 +122,7 @@ class EnhancePlugin implements Plugin<Project> {
     }
 
     logger.debug("perform enhancement for task: $task")
-    List<URL> urls = createClassPath(project)
+    List<URL> urls = createClassPath(project, "testCompileClasspath")
     def cxtLoader = Thread.currentThread().getContextClassLoader()
 
     projectOutputDirs.each { urls.add(it.toURI().toURL()) }
@@ -127,8 +130,7 @@ class EnhancePlugin implements Plugin<Project> {
       // also add outputDir to the classpath
       Path output = outputDir.toPath()
       urls.add(output.toUri().toURL())
-      URL[] urlsArray = urls.toArray(new URL[urls.size()])
-      new EbeanEnhancer(output, urlsArray, cxtLoader, params).enhance()
+      new EbeanEnhancer(output, toUrlArray(urls), cxtLoader, params).enhance()
     }
   }
 
@@ -143,8 +145,8 @@ class EnhancePlugin implements Plugin<Project> {
   }
 
 
-  private static List<URL> createClassPath(Project project) {
-    Set<File> compCP = project.configurations.getByName("compileClasspath").resolve()
+  private static List<URL> createClassPath(Project project, String classpathName) {
+    Set<File> compCP = project.configurations.getByName(classpathName).resolve()
     List<URL> urls = compCP.collect { it.toURI().toURL() }
 
     FileCollection outDirs = project.sourceSets.main.output.classesDirs
