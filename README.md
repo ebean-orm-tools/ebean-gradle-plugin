@@ -5,7 +5,7 @@ Credit goes to khomich for his work https://github.com/khomich/gradle-ebean-enha
 
 # Documentation
 
-Refer to http://ebean-orm.github.io/docs/tooling/gradle
+Refer to https://ebean.io/docs/getting-started/gradle
 
 # ebean-gradle-plugin
 Plugin that performs Enhancement (entity, transactional, query bean) and can generate query beans from entity beans written in Kotlin via kapt.
