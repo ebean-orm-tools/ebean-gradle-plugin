@@ -1,5 +1,6 @@
 package io.ebean.gradle
 
+import io.ebean.enhance.EnhancementException
 import io.ebean.enhance.Transformer
 import io.ebean.enhance.common.EnhanceContext
 import io.ebean.enhance.common.InputStreamTransform
@@ -106,6 +107,8 @@ class EbeanEnhancer {
           }
         }
       }
+    } catch (EnhancementException e) {
+      throw new EnhanceException("Error trying to enhance class $className", e)
     } catch (IOException e) {
       throw new EnhanceException("Unable to read class file $classFile.name for enhancement", e)
     } catch (IllegalClassFormatException e) {
