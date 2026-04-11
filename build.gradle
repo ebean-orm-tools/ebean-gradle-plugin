@@ -1,14 +1,15 @@
 plugins {
   id 'groovy'
-  id 'java-gradle-plugin'
-  id 'com.gradle.plugin-publish' version '0.11.0'
-  id 'maven-publish'
+  id 'com.gradle.plugin-publish' version '2.1.1'
 }
 
 group 'io.ebean'
-version '16.3.0'
+version '17.4.0'
 
-sourceCompatibility = 1.8
+java {
+  sourceCompatibility = JavaVersion.VERSION_1_8
+  targetCompatibility = JavaVersion.VERSION_1_8
+}
 
 repositories {
   mavenLocal()
@@ -16,20 +17,28 @@ repositories {
 }
 
 dependencies {
-  implementation 'io.ebean:ebean-agent:16.3.0'
+  implementation 'io.ebean:ebean-agent:17.4.0'
   implementation gradleApi()
   implementation localGroovy()
+  testImplementation gradleTestKit()
+  testImplementation 'junit:junit:4.13.2'
 }
 
-pluginBundle {
+gradlePlugin {
   website = 'https://ebean-orm.github.io/docs/tooling/gradle'
   vcsUrl = 'https://github.com/ebean-orm-tools/ebean-gradle-plugin'
-  description = 'Ebean ORM enhancement plugin'
-  tags = ['Ebean', 'ORM', 'JPA']
   plugins {
     ebeanPlugin {
       id = 'io.ebean'
+      implementationClass = 'io.ebean.gradle.EnhancePlugin'
       displayName = 'Ebean plugin'
+      description = 'Ebean ORM enhancement plugin'
+      tags.set(['Ebean', 'ORM', 'JPA'])
+      compatibility(it) {
+        features {
+          configurationCache = true
+        }
+      }
     }
   }
 }

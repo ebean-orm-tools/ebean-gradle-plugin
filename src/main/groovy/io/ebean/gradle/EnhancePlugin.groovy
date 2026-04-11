@@ -2,177 +2,63 @@ package io.ebean.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
-import org.gradle.api.Task
-import org.gradle.api.UnknownTaskException
-import org.gradle.api.file.FileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import org.gradle.api.tasks.TaskContainer
-import org.gradle.api.tasks.compile.AbstractCompile
-
-import java.nio.file.Path
+import org.gradle.api.tasks.SourceSet
+import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.testing.Test
 
 class EnhancePlugin implements Plugin<Project> {
 
   private final Logger logger = Logging.getLogger(EnhancePlugin.class)
 
-  private static def supportedCompilerTasks = [
-    'processResources',
-    'compileJava',
-    'compileKotlin',
-    'compileGroovy',
-    'compileScala',
-    'compileKotlinAfterJava',
-    'copyMainKotlinClasses',
-    'classes',
-    'testClasses',
-    'compileTestJava',
-    'compileTestKotlin',
-    'compileTestGroovy',
-    'compileTestScala',
-    'compileTestFixturesJava',
-    'compileTestFixturesKotlin',
-    'compileTestFixturesGroovy',
-    'compileTestFixturesScala',
-  ]
-
-  /**
-   * Output directories containing classes we want to run enhancement on.
-   */
-  private def outputDirs = new HashMap<Project, Set<File>>().withDefault { [] }
-
-  /**
-   * Test output directories containing classes we want to run enhancement on.
-   */
-  private def testOutputDirs = new HashMap<Project, Set<File>>().withDefault { [] }
-
   void apply(Project project) {
-    def params = project.extensions.create("ebean", EnhancePluginExtension)
+    EnhancePluginExtension params = project.extensions.create('ebean', EnhancePluginExtension)
 
-    // delay the registration of the various compile task.doLast hooks
     project.afterEvaluate({
-
-      EnhancePluginExtension extension = project.extensions.findByType(EnhancePluginExtension)
       logger.info("EnhancePlugin apply")
 
-      def tasks = project.tasks
-      initializeOutputDirs(project)
-      // processResources task must be run before compileJava so ebean.mf to be in place. Same is valid for tests
-      tasks.findByName("compileJava").mustRunAfter(tasks.findByName("processResources"))
-      tasks.findByName("compileTestJava").mustRunAfter(tasks.findByName("processTestResources"))
-      supportedCompilerTasks.each { compileTask ->
-        tryHookCompilerTask(tasks, compileTask, project, params)
+      SourceSetContainer sourceSets = project.extensions.findByName('sourceSets') as SourceSetContainer
+      if (sourceSets == null) {
+        return
       }
 
-      def testTask = project.tasks.getByName('test')
-      testTask.doFirst {
-        logger.debug("enhancement prior to running tests")
-
-        URL[] classpathUrls = toUrlArray(createClassPath(project, 'compileClasspath'))
-        enhanceDirectory(extension, "$project.buildDir/classes/main/", classpathUrls)
-        enhanceDirectory(extension, "$project.buildDir/kotlin-classes/main/", classpathUrls)
-
-        URL[] testClasspathUrls = toUrlArray(createClassPath(project, 'testCompileClasspath'))
-        enhanceDirectory(extension, "$project.buildDir/classes/test/", testClasspathUrls)
-      }
+      registerEnhanceTask(project, sourceSets.findByName(SourceSet.MAIN_SOURCE_SET_NAME), params)
+      registerEnhanceTask(project, sourceSets.findByName(SourceSet.TEST_SOURCE_SET_NAME), params)
+      registerEnhanceTask(project, sourceSets.findByName('testFixtures'), params)
     })
   }
 
-  private static URL[] toUrlArray(List<URL> urls) {
-    return urls.toArray(new URL[urls.size()])
-  }
-
-  /**
-   * Fetch the output directories, containing the classes to enhance, from the project's sources set.
-   */
-  private void initializeOutputDirs(Project project) {
-    project.sourceSets.each { sourceSet ->
-      Set<File> files = sourceSet.output.classesDirs.files as Set<File>
-      testOutputDirs[project] += files.findAll {
-        it.name.contains("test")
-      }
-      outputDirs[project] += files.findAll {
-        it.name.contains("main")
-      }
-    }
-    logger.debug("Test output dirs: $testOutputDirs")
-    logger.debug("Main output dirs: $outputDirs")
-  }
-
-  private void tryHookCompilerTask(TaskContainer tasks, String taskName, Project project, EnhancePluginExtension params) {
-    try {
-      def task = tasks.getByName(taskName)
-      task.doLast({ Task completedTask ->
-        enhanceTaskOutputs(project, params, completedTask)
-      })
-    } catch (UnknownTaskException e) {
-      logger.debug("Ignore as compiler task is not activated " + e.message)
-    }
-  }
-
-  /**
-   * Perform the enhancement for the classes and testClasses tasks only (otherwise skip).
-   */
-  private void enhanceTaskOutputs(Project project, EnhancePluginExtension params, Task task) {
-    Set<File> projectOutputDirs = new HashSet<>()
-    if (task instanceof AbstractCompile || isKotlinCompileTask(task.name)) {
-      projectOutputDirs.addAll(task.outputs.files)
-    } else {
+  private void registerEnhanceTask(Project project, SourceSet sourceSet, EnhancePluginExtension params) {
+    if (sourceSet == null) {
       return
     }
 
-    logger.debug("perform enhancement for task: $task")
-    List<URL> urls = createClassPath(project, "testCompileClasspath")
-    def cxtLoader = Thread.currentThread().getContextClassLoader()
-
-    projectOutputDirs.each { urls.add(it.toURI().toURL()) }
-    projectOutputDirs.each { outputDir ->
-      // also add outputDir to the classpath
-      Path output = outputDir.toPath()
-      urls.add(output.toUri().toURL())
-      new EbeanEnhancer(output, toUrlArray(urls), cxtLoader, params).enhance()
-    }
-  }
-
-  private static void enhanceDirectory(EnhancePluginExtension params, String outputDir, URL[] classpathUrls) {
-    File outDir = new File(outputDir)
-    if (!outDir.exists()) {
+    def lifecycleTask = project.tasks.findByName(sourceSet.classesTaskName)
+    if (lifecycleTask == null) {
       return
     }
 
-    def cxtLoader = Thread.currentThread().getContextClassLoader()
-    new EbeanEnhancer(outDir.toPath(), classpathUrls, cxtLoader, params).enhance()
-  }
-
-
-  private static List<URL> createClassPath(Project project, String classpathName) {
-    Set<File> compCP = project.configurations.getByName(classpathName).resolve()
-    List<URL> urls = compCP.collect { it.toURI().toURL() }
-
-    FileCollection outDirs = project.sourceSets.main.output.classesDirs
-    outDirs.each { outputDir ->
-      addToClassPath(urls, outputDir)
+    def enhanceTaskName = sourceSet.name == SourceSet.MAIN_SOURCE_SET_NAME ? 'ebeanEnhance' : "ebeanEnhance${sourceSet.name.capitalize()}"
+    def enhanceTask = project.tasks.register(enhanceTaskName, EbeanEnhanceTask) { task ->
+      task.group = 'ebean'
+      task.description = "Enhances Ebean classes for the ${sourceSet.name} source set."
+      task.debugLevel.set(params.debugLevel)
+      task.classpathFiles.from(sourceSet.compileClasspath)
+      task.classpathFiles.from(sourceSet.output)
+      task.classesDirs.from(sourceSet.output.classesDirs)
+      task.dependsOn(lifecycleTask)
     }
 
-    File resMain = new File(project.buildDir, "resources/main")
-    if (resMain.exists() && resMain.isDirectory()) {
-      addToClassPath(urls, resMain)
+    def jarTaskName = sourceSet.name == SourceSet.MAIN_SOURCE_SET_NAME ? 'jar' : sourceSet.name == 'testFixtures' ? 'testFixturesJar' : null
+    if (jarTaskName != null) {
+      project.tasks.matching { it.name == jarTaskName }.configureEach {
+        dependsOn(enhanceTask)
+      }
     }
 
-    File kotlinMain = new File(project.buildDir, "kotlin-classes/main")
-    if (kotlinMain.exists() && kotlinMain.isDirectory()) {
-      addToClassPath(urls, kotlinMain)
+    project.tasks.withType(Test).configureEach {
+      dependsOn(enhanceTask)
     }
-    return urls
-  }
-
-  static void addToClassPath(List<URL> urls, File file) {
-    urls.add(file.toURI().toURL())
-  }
-
-  static boolean isKotlinCompileTask(String taskName) {
-    return 'compileKotlin'.equalsIgnoreCase(taskName) ||
-      'compileTestKotlin'.equalsIgnoreCase(taskName) ||
-      'compileTestFixturesKotlin'.equalsIgnoreCase(taskName)
   }
 }
