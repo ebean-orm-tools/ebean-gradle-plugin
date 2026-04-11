@@ -2,10 +2,12 @@ package io.ebean.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.tasks.SourceSet
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.jvm.tasks.Jar
 import org.gradle.api.tasks.testing.Test
 
 class EnhancePlugin implements Plugin<Project> {
@@ -39,21 +41,38 @@ class EnhancePlugin implements Plugin<Project> {
       return
     }
 
+    List<File> rawClassDirs = sourceSet.output.classesDirs.files.sort { it.absolutePath }
+    if (rawClassDirs.isEmpty()) {
+      return
+    }
+
+    File enhancedClassDir = new File(project.buildDir, "ebean-enhanced/${sourceSet.name}")
+
     def enhanceTaskName = sourceSet.name == SourceSet.MAIN_SOURCE_SET_NAME ? 'ebeanEnhance' : "ebeanEnhance${sourceSet.name.capitalize()}"
     def enhanceTask = project.tasks.register(enhanceTaskName, EbeanEnhanceTask) { task ->
       task.group = 'ebean'
       task.description = "Enhances Ebean classes for the ${sourceSet.name} source set."
       task.debugLevel.set(params.debugLevel)
       task.classpathFiles.from(sourceSet.compileClasspath)
-      task.classpathFiles.from(sourceSet.output)
-      task.classesDirs.from(sourceSet.output.classesDirs)
+      if (sourceSet.output.resourcesDir != null) {
+        task.classpathFiles.from(sourceSet.output.resourcesDir)
+      }
+      task.rawClassesDirs.from(rawClassDirs)
+      task.enhancedClassesDir.set(enhancedClassDir)
       task.dependsOn(lifecycleTask)
     }
 
+    ConfigurableFileCollection classesDirs = sourceSet.output.classesDirs as ConfigurableFileCollection
+    classesDirs.setFrom(enhancedClassDir)
+    classesDirs.builtBy(enhanceTask)
+
     def jarTaskName = sourceSet.name == SourceSet.MAIN_SOURCE_SET_NAME ? 'jar' : sourceSet.name == 'testFixtures' ? 'testFixturesJar' : null
     if (jarTaskName != null) {
-      project.tasks.matching { it.name == jarTaskName }.configureEach {
+      project.tasks.withType(Jar).matching { it.name == jarTaskName }.configureEach {
         dependsOn(enhanceTask)
+        exclude { details ->
+          rawClassDirs.any { rawDir -> details.file.toPath().startsWith(rawDir.toPath()) }
+        }
       }
     }
 

@@ -39,6 +39,21 @@ and wires consumers to depend on enhancement before they package or execute thos
 
 That is important for `testFixturesJar`, because packaging before enhancement leaves the jar with stale, unenhanced bytecode.
 
+### Enhanced outputs for downstream project consumers
+
+A second issue remained after the initial configuration-cache fix: enhancement still rewrote raw compiler output directories in place.
+
+That allowed downstream project dependencies to snapshot or package those raw class directories while enhancement was mutating them, which could surface as intermittent `No such file or directory` failures in Gradle/Kotlin transforms.
+
+The plugin now:
+
+- merges raw compiler outputs into a dedicated enhanced output directory per source set
+- exposes that enhanced directory as the source set's consumable classes output
+- keeps raw compile directories internal
+- excludes raw compile directories from jar packaging
+
+This removes the producer/consumer race by ensuring downstream consumers and packaging tasks only read stable enhanced outputs.
+
 ### Publishing metadata modernization
 
 The build keeps Gradle Plugin Portal publishing support, but updates it to the modern `com.gradle.plugin-publish` 2.x configuration style:
@@ -55,6 +70,7 @@ The patch was validated in a consumer build with Gradle 9.4.1 by checking that:
 1. `test --configuration-cache` stores the configuration cache successfully
 2. a second `test --configuration-cache` run reuses the cache
 3. `testFixturesJar` contains an enhanced entity class, not stale pre-enhancement bytecode
+4. downstream project dependencies resolve enhanced producer classes instead of raw compile outputs
 
 ## Notes
 

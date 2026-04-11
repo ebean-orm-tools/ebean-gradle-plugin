@@ -39,6 +39,15 @@ class EnhancePluginFunctionalTest {
     assertTrue(result.output.contains('Verified enhancement in test fixtures jar'))
   }
 
+  @Test
+  void exposesEnhancedProducerClassesToProjectDependencyConsumers() {
+    writeMultiProjectDependencyBuild()
+
+    def result = runner(':consumer:verifyProducerDependencyIsEnhanced', '--stacktrace').build()
+    assertEquals(SUCCESS, result.task(':consumer:verifyProducerDependencyIsEnhanced').outcome)
+    assertTrue(result.output.contains('Verified enhanced producer dependency'))
+  }
+
   private GradleRunner runner(String... arguments) {
     GradleRunner.create()
       .withProjectDir(testProjectDir)
@@ -124,6 +133,84 @@ public class SampleTest {
   @Test
   public void passes() {
   }
+}
+''')
+  }
+
+  private void writeMultiProjectDependencyBuild() {
+    testProjectDir = File.createTempDir('ebean-gradle-plugin', 'functional-test')
+    new File(testProjectDir, 'producer').mkdirs()
+    new File(testProjectDir, 'consumer').mkdirs()
+
+    new File(testProjectDir, 'settings.gradle') << '''
+rootProject.name = 'sample'
+include 'producer', 'consumer'
+'''.trim() + '\n'
+
+    new File(testProjectDir, 'build.gradle') << '''
+allprojects {
+  repositories {
+    mavenCentral()
+  }
+}
+'''.trim() + '\n'
+
+    new File(testProjectDir, 'producer/build.gradle') << '''
+plugins {
+  id 'java-library'
+  id 'io.ebean'
+}
+
+dependencies {
+  api 'io.ebean:ebean:17.4.0'
+  api 'jakarta.persistence:jakarta.persistence-api:3.1.0'
+}
+'''.trim() + '\n'
+
+    new File(testProjectDir, 'consumer/build.gradle') << '''
+plugins {
+  id 'java-library'
+}
+
+dependencies {
+  implementation project(':producer')
+}
+
+tasks.register('verifyProducerDependencyIsEnhanced') {
+  inputs.files(sourceSets.main.compileClasspath)
+  doLast {
+    def urls = sourceSets.main.compileClasspath.files.collect { it.toURI().toURL() } as URL[]
+    URLClassLoader loader = new URLClassLoader(urls, (ClassLoader) null)
+    try {
+      def entityClass = loader.loadClass('sample.ProducerEntity')
+      def entityBeanType = loader.loadClass('io.ebean.bean.EntityBean')
+      assert entityBeanType.isAssignableFrom(entityClass)
+      println 'Verified enhanced producer dependency'
+    } finally {
+      loader.close()
+    }
+  }
+}
+'''.trim() + '\n'
+
+    writeSource('producer/src/main/java/sample/ProducerEntity.java', '''
+package sample;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+
+@Entity
+public class ProducerEntity {
+  @Id
+  Long id;
+}
+''')
+
+    writeSource('consumer/src/main/java/sample/ConsumerType.java', '''
+package sample;
+
+public class ConsumerType {
+  ProducerEntity producerEntity;
 }
 ''')
   }
