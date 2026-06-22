@@ -25,9 +25,9 @@ class EnhancePlugin implements Plugin<Project> {
         return
       }
 
-      registerEnhanceTask(project, sourceSets.findByName(SourceSet.MAIN_SOURCE_SET_NAME), params)
-      registerEnhanceTask(project, sourceSets.findByName(SourceSet.TEST_SOURCE_SET_NAME), params)
-      registerEnhanceTask(project, sourceSets.findByName('testFixtures'), params)
+      for (String sourceSetName : params.enhanceSourceSets) {
+        registerEnhanceTask(project, sourceSets.findByName(sourceSetName), params)
+      }
     })
   }
 
