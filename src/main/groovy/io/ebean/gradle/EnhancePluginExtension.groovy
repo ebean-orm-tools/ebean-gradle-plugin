@@ -24,4 +24,13 @@ class EnhancePluginExtension {
    * querybean-generator version for use when addKapt is true.
    */
   String generatorVersion = '11.36.1'
+
+  /**
+   * Source sets to apply enhancement to. Defaults to main, test, and testFixtures.
+   * <p>
+   * Override to limit enhancement to specific source sets. For example, set to
+   * {@code ['test']} to only enhance the test source set (e.g. when ebean is a
+   * test-only dependency).
+   */
+  List<String> enhanceSourceSets = ['main', 'test', 'testFixtures']
 }
